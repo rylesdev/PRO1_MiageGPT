@@ -18,12 +18,5 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 ## Configuration de l'API
 
 1. Créez un compte sur https://console.groq.com/keys et générez une clé API
-2. Définissez la variable d'environnement GROQ_API_KEY :
-
-Sur Windows :
-set GROQ_API_KEY=votre_clé_ici
-
-Sur Mac/Linux :
-export GROQ_API_KEY=votre_clé_ici
-
-3. Lancez le projet
+2. Lancez le projet
+3. Quand MiageGPT vous le demandera, entrez la clé API
