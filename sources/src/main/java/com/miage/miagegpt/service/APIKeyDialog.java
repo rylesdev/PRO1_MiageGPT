@@ -1,0 +1,165 @@
+package com.miage.miagegpt.service;
+
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+public class APIKeyDialog {
+
+    private String resultApiKey = null;
+    private final Stage stage;
+
+    public APIKeyDialog(Stage owner) {
+        this.stage = new Stage();
+        this.stage.initOwner(owner);
+        this.stage.setTitle("Configuration de la clé API GROQ");
+        this.stage.setWidth(500);
+        this.stage.setHeight(300);
+        this.stage.setResizable(false);
+    }
+
+    public String showFirstTimeSetup() {
+        return showDialog(true);
+    }
+
+    public String showUpdateDialog(String currentKey) {
+        return showDialog(false, currentKey);
+    }
+
+    private String showDialog(boolean isFirstTime, String... currentKey) {
+        VBox root = new VBox(15);
+        root.setPadding(new Insets(20));
+        root.setStyle("-fx-font-size: 12;");
+
+        Label titleLabel = new Label(isFirstTime ? "Configuration de la clé API GROQ" : "Modifier la clé API GROQ");
+        titleLabel.setStyle("-fx-font-size: 14; -fx-font-weight: bold;");
+
+        Label instructionLabel = new Label(
+            isFirstTime 
+                ? "Vous devez configurer une clé API GROQ pour utiliser cette application.\n" +
+                  "Créez une clé sur: https://console.groq.com/keys\n\n" +
+                  "Entrez votre clé API:"
+                : "Voulez-vous utiliser la même clé API ou en utiliser une nouvelle ?\n\n"
+        );
+        instructionLabel.setWrapText(true);
+
+        if (!isFirstTime && currentKey.length > 0 && currentKey[0] != null) {
+            Label currentKeyLabel = new Label("Clé actuelle: " + maskApiKey(currentKey[0]));
+            currentKeyLabel.setStyle("-fx-text-fill: #666;");
+            root.getChildren().add(currentKeyLabel);
+        }
+
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Entrez votre clé API (commence par 'gsk_')");
+        passwordField.setPrefHeight(40);
+
+        CheckBox showPasswordCheckBox = new CheckBox("Afficher la clé");
+        TextField textField = new TextField();
+        textField.setPromptText("Entrez votre clé API (commence par 'gsk_')");
+        textField.setPrefHeight(40);
+        textField.setVisible(false);
+        textField.setManaged(false);
+
+        showPasswordCheckBox.setOnAction(e -> {
+            if (showPasswordCheckBox.isSelected()) {
+                textField.setText(passwordField.getText());
+                passwordField.setVisible(false);
+                passwordField.setManaged(false);
+                textField.setVisible(true);
+                textField.setManaged(true);
+            } else {
+                passwordField.setText(textField.getText());
+                textField.setVisible(false);
+                textField.setManaged(false);
+                passwordField.setVisible(true);
+                passwordField.setManaged(true);
+            }
+        });
+
+        Button confirmButton = new Button(isFirstTime ? "Confirmer" : "Utiliser cette clé");
+        Button keepButton = null;
+        Button cancelButton = new Button("Annuler");
+
+        confirmButton.setPrefWidth(120);
+        confirmButton.setStyle("-fx-font-size: 12; -fx-padding: 8;");
+        cancelButton.setPrefWidth(120);
+        cancelButton.setStyle("-fx-font-size: 12; -fx-padding: 8;");
+
+        confirmButton.setOnAction(e -> {
+            String input = showPasswordCheckBox.isSelected() ? textField.getText() : passwordField.getText();
+            if (validateApiKey(input)) {
+                resultApiKey = input;
+                stage.close();
+            } else {
+                showError("Clé API invalide. Elle doit commencer par 'gsk_'.");
+            }
+        });
+
+        cancelButton.setOnAction(e -> {
+            resultApiKey = null;
+            stage.close();
+        });
+
+        HBox passwordBox = new HBox(10);
+        passwordBox.getChildren().addAll(
+            passwordField,
+            textField,
+            showPasswordCheckBox
+        );
+        HBox.setHgrow(passwordField, javafx.scene.layout.Priority.ALWAYS);
+        HBox.setHgrow(textField, javafx.scene.layout.Priority.ALWAYS);
+
+        root.getChildren().addAll(
+            titleLabel,
+            instructionLabel,
+            passwordBox
+        );
+
+        HBox buttonBox = new HBox(10);
+        buttonBox.setPadding(new Insets(15, 0, 0, 0));
+        buttonBox.setStyle("-fx-alignment: center-right;");
+
+        if (!isFirstTime && currentKey.length > 0 && currentKey[0] != null) {
+            keepButton = new Button("Garder la clé actuelle");
+            keepButton.setPrefWidth(150);
+            keepButton.setStyle("-fx-font-size: 12; -fx-padding: 8;");
+            keepButton.setOnAction(e -> {
+                resultApiKey = currentKey[0];
+                stage.close();
+            });
+            buttonBox.getChildren().addAll(keepButton, confirmButton, cancelButton);
+        } else {
+            buttonBox.getChildren().addAll(confirmButton, cancelButton);
+        }
+
+        root.getChildren().add(buttonBox);
+
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.showAndWait();
+
+        return resultApiKey;
+    }
+
+    private boolean validateApiKey(String apiKey) {
+        return apiKey != null && !apiKey.isEmpty() && apiKey.trim().startsWith("gsk_");
+    }
+
+    private String maskApiKey(String apiKey) {
+        if (apiKey == null || apiKey.length() < 10) {
+            return "***";
+        }
+        return apiKey.substring(0, 4) + "..." + apiKey.substring(apiKey.length() - 4);
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur de validation");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+}

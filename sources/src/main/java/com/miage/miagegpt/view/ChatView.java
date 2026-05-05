@@ -67,7 +67,7 @@ public class ChatView {
     }
 
     public void initialize(Stage primaryStage) {
-        if (Config.GROQ_API_KEY.isEmpty()) {
+        if (!Config.isApiKeyConfigured()) {
             showAPIKeyError();
             return;
         }

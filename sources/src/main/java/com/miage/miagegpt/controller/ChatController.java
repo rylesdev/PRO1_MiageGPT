@@ -22,7 +22,7 @@ public class ChatController {
         DatabaseManager.getInstance();
         System.out.println("[MiageGPT] Base de données chargée !");
 
-        this.groqService = new GroqAPIService(Config.GROQ_API_KEY);
+        this.groqService = new GroqAPIService(Config.getGROQ_API_KEY());
         this.conversationManager = new ConversationManager();
     }
 
