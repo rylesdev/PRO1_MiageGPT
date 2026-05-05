@@ -7,6 +7,12 @@ out/
 *.class
 
 # =====================
+# Local database / secrets
+# =====================
+data/*.mv.db
+data/*.trace.db
+
+# =====================
 # Logs
 # =====================
 *.log
