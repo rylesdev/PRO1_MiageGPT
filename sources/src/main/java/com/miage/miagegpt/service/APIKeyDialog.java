@@ -7,6 +7,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.awt.Desktop;
+import java.net.URI;
+import java.net.URISyntaxException;
+
 public class APIKeyDialog {
 
     private String resultApiKey = null;
@@ -38,13 +42,23 @@ public class APIKeyDialog {
         titleLabel.setStyle("-fx-font-size: 14; -fx-font-weight: bold;");
 
         Label instructionLabel = new Label(
-            isFirstTime 
-                ? "Vous devez configurer une clé API GROQ pour utiliser cette application.\n" +
-                  "Créez une clé sur: https://console.groq.com/keys\n\n" +
-                  "Entrez votre clé API:"
+            isFirstTime
+                ? "Vous devez configurer une clé API GROQ pour utiliser cette application."
                 : "Voulez-vous utiliser la même clé API ou en utiliser une nouvelle ?\n\n"
         );
         instructionLabel.setWrapText(true);
+
+        Hyperlink groqKeysLink = new Hyperlink("https://console.groq.com/keys");
+        groqKeysLink.setOnAction(e -> openUrl("https://console.groq.com/keys"));
+        groqKeysLink.setVisible(isFirstTime);
+        groqKeysLink.setManaged(isFirstTime);
+
+        VBox instructionBox = new VBox(4);
+        instructionBox.getChildren().addAll(
+            instructionLabel,
+            new Label("Créez une clé sur :"),
+            groqKeysLink
+        );
 
         if (!isFirstTime && currentKey.length > 0 && currentKey[0] != null) {
             Label currentKeyLabel = new Label("Clé actuelle: " + maskApiKey(currentKey[0]));
@@ -114,7 +128,7 @@ public class APIKeyDialog {
 
         root.getChildren().addAll(
             titleLabel,
-            instructionLabel,
+            instructionBox,
             passwordBox
         );
 
@@ -161,5 +175,15 @@ public class APIKeyDialog {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void openUrl(String url) {
+        try {
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().browse(new URI(url));
+            }
+        } catch (URISyntaxException | java.io.IOException ex) {
+            showError("Impossible d'ouvrir le lien : " + url);
+        }
     }
 }
