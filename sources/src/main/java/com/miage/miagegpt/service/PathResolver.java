@@ -7,7 +7,8 @@ public class PathResolver {
     private static File dataDir = null;
 
     public static synchronized File getDataDir() {
-        if (dataDir != null) return dataDir;
+        if (dataDir != null)
+            return dataDir;
 
         String explicit = System.getProperty("miagegpt.data.dir");
         if (explicit != null && !explicit.isBlank()) {

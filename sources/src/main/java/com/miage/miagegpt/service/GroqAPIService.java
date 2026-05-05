@@ -42,8 +42,10 @@ public class GroqAPIService {
     }
 
     private static String escapeJson(String text) {
-        if (text == null) return "";
-        return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "").replace("\t", "\\t");
+        if (text == null)
+            return "";
+        return text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "").replace("\t",
+                "\\t");
     }
 
     private String createJsonRequest(String systemPrompt, String conversationHistory, String userQuestion) {
@@ -92,8 +94,10 @@ public class GroqAPIService {
             }
         }
 
-        String wrappedQuestion = userQuestion + "\n\n[CONSIGNE SYSTÈME : Réponds UNIQUEMENT avec les données fournies dans le message système. " +
-                "Ne cite AUCUN lien, URL, site web, email ou information qui ne figure pas TEXTUELLEMENT dans les données. " +
+        String wrappedQuestion = userQuestion
+                + "\n\n[CONSIGNE SYSTÈME : Réponds UNIQUEMENT avec les données fournies dans le message système. " +
+                "Ne cite AUCUN lien, URL, site web, email ou information qui ne figure pas TEXTUELLEMENT dans les données. "
+                +
                 "Si tu ne trouves pas l'information, dis simplement que tu ne l'as pas.]";
 
         messages.append(",{\"role\": \"user\", \"content\": \"")
@@ -146,7 +150,8 @@ public class GroqAPIService {
     }
 
     private String readStream(java.io.InputStream stream) throws Exception {
-        if (stream == null) return "";
+        if (stream == null)
+            return "";
         try (Scanner scanner = new Scanner(stream, StandardCharsets.UTF_8)) {
             scanner.useDelimiter("\\A");
             return scanner.hasNext() ? scanner.next() : "";
@@ -168,13 +173,16 @@ public class GroqAPIService {
             }
 
             int choicesStart = responseBody.indexOf("\"choices\"");
-            if (choicesStart < 0) return "Aucune réponse reçue";
+            if (choicesStart < 0)
+                return "Aucune réponse reçue";
 
             int contentStart = responseBody.indexOf("\"content\"", choicesStart);
-            if (contentStart < 0) return "Aucune réponse reçue";
+            if (contentStart < 0)
+                return "Aucune réponse reçue";
 
             int textStart = responseBody.indexOf("\"", contentStart + 10);
-            if (textStart < 0) return "Aucune réponse reçue";
+            if (textStart < 0)
+                return "Aucune réponse reçue";
 
             int textEnd = textStart + 1;
             while (textEnd < responseBody.length()) {

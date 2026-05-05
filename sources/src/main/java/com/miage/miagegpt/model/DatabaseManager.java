@@ -1,23 +1,82 @@
 package com.miage.miagegpt.model;
 
-import com.miage.miagegpt.service.PathResolver;
-
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 public class DatabaseManager {
 
-    private static final String DB_URL = initDbUrl();
+    private static final DatabaseSettings DB_SETTINGS = loadDatabaseSettings();
+    private static final String DB_URL = DB_SETTINGS.url;
+    private static final String DB_USER = DB_SETTINGS.user;
+    private static final String DB_PASSWORD = DB_SETTINGS.password;
+    private static final boolean USE_POSTGRES = true;
 
-    private static String initDbUrl() {
-        java.io.File dataDir = PathResolver.getDataDir();
-        String dbPath = new java.io.File(dataDir, "miagegpt_data").getAbsolutePath();
-        System.out.println("[DB] Emplacement de la base de données : " + dbPath + ".mv.db");
-        return "jdbc:h2:" + dbPath;
+    private static DatabaseSettings loadDatabaseSettings() {
+        Properties properties = new Properties();
+
+        try (InputStream inputStream = DatabaseManager.class.getClassLoader().getResourceAsStream("database.properties")) {
+            if (inputStream != null) {
+                properties.load(inputStream);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Impossible de charger database.properties", e);
+        }
+
+        String envUrl = System.getenv("NEON_DATABASE_URL");
+        if (envUrl == null || envUrl.isEmpty()) envUrl = System.getenv("DATABASE_URL");
+        String envUser = System.getenv("DATABASE_USER");
+        String envPassword = System.getenv("DATABASE_PASSWORD");
+
+        String url = firstNonEmpty(envUrl, properties.getProperty("database.url"));
+        String user = firstNonEmpty(envUser, properties.getProperty("database.user"));
+        String password = firstNonEmpty(envPassword, properties.getProperty("database.password"));
+
+        if (url == null || url.isEmpty()) {
+            throw new IllegalStateException("Base NEON non configurée. Renseigne database.properties ou les variables d'environnement.");
+        }
+
+        if (url.startsWith("postgres://")) {
+            String withoutProto = url.substring("postgres://".length());
+            String[] parts = withoutProto.split("@", 2);
+            String creds = parts[0];
+            String hostpart = parts[1];
+            String[] credParts = creds.split(":", 2);
+            if (user == null || user.isEmpty()) user = credParts[0];
+            if (password == null || password.isEmpty()) password = credParts.length > 1 ? credParts[1] : "";
+            String[] hostParts = hostpart.split("/", 2);
+            String hostPort = hostParts[0];
+            String dbName = hostParts.length > 1 ? hostParts[1] : "";
+            url = "jdbc:postgresql://" + hostPort + "/" + dbName + "?sslmode=require&channel_binding=require";
+        }
+
+        if (!url.startsWith("jdbc:postgresql:")) {
+            throw new IllegalStateException("DATABASE_URL doit être une URL PostgreSQL.");
+        }
+
+        System.out.println("[DB] Utilisation de la base Postgres NEON: " + url);
+        return new DatabaseSettings(url, user != null ? user : "", password != null ? password : "");
     }
-    private static final String DB_USER = "sa";
-    private static final String DB_PASSWORD = "";
+
+    private static String firstNonEmpty(String first, String second) {
+        if (first != null && !first.isEmpty()) return first;
+        if (second != null && !second.isEmpty()) return second;
+        return null;
+    }
+
+    private static final class DatabaseSettings {
+        private final String url;
+        private final String user;
+        private final String password;
+
+        private DatabaseSettings(String url, String user, String password) {
+            this.url = url;
+            this.user = user;
+            this.password = password;
+        }
+    }
 
     private static DatabaseManager instance;
 
@@ -33,59 +92,21 @@ public class DatabaseManager {
     }
 
     private Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("[DB] Driver Postgres introuvable : " + e.getMessage());
+        }
+        if (DB_USER != null && !DB_USER.isEmpty()) {
+            return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        }
+        return DriverManager.getConnection(DB_URL);
     }
 
     private void initDatabase() {
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
 
-            stmt.execute(
-                "CREATE TABLE IF NOT EXISTS association_info (" +
-                "   id INT PRIMARY KEY AUTO_INCREMENT," +
-                "   nom VARCHAR(200) NOT NULL," +
-                "   description TEXT," +
-                "   adresse VARCHAR(300)" +
-                ")"
-            );
-
-            stmt.execute(
-                "CREATE TABLE IF NOT EXISTS membres (" +
-                "   id INT PRIMARY KEY AUTO_INCREMENT," +
-                "   nom VARCHAR(100) NOT NULL," +
-                "   prenom VARCHAR(100)," +
-                "   role VARCHAR(100) NOT NULL," +
-                "   email VARCHAR(150)," +
-                "   annee_debut INT," +
-                "   description TEXT" +
-                ")"
-            );
-
-            stmt.execute(
-                "CREATE TABLE IF NOT EXISTS faq (" +
-                "   id INT PRIMARY KEY AUTO_INCREMENT," +
-                "   question VARCHAR(500) NOT NULL," +
-                "   reponse TEXT NOT NULL," +
-                "   categorie VARCHAR(100)" +
-                ")"
-            );
-
-            stmt.execute(
-                "CREATE TABLE IF NOT EXISTS reseaux_sociaux (" +
-                "   id INT PRIMARY KEY AUTO_INCREMENT," +
-                "   type VARCHAR(100) NOT NULL," +
-                "   valeur VARCHAR(300) NOT NULL," +
-                "   libelle VARCHAR(200)" +
-                ")"
-            );
-
-            try { stmt.execute("ALTER TABLE association_info ADD COLUMN IF NOT EXISTS universite VARCHAR(200)"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info ADD COLUMN IF NOT EXISTS type_asso VARCHAR(100)"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info ADD COLUMN IF NOT EXISTS slogan VARCHAR(300)"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info DROP COLUMN IF EXISTS annee_fondation"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info DROP COLUMN IF EXISTS nb_membres"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info DROP COLUMN IF EXISTS email"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE association_info DROP COLUMN IF EXISTS site_web"); } catch (SQLException ignored) {}
-            try { stmt.execute("DROP TABLE IF EXISTS evenements"); } catch (SQLException ignored) {}
+            System.out.println("[DB] Connexion NEON initialisée.");
 
             System.out.println("[DB] Base de données initialisée avec succès !");
 
@@ -262,6 +283,10 @@ public class DatabaseManager {
 
     public void updateAssociationInfo(String nom, String description,
                                        String adresse, String universite, String typeAsso) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] updateAssociationInfo ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection()) {
             conn.createStatement().execute("DELETE FROM association_info");
             PreparedStatement ps = conn.prepareStatement(
@@ -280,6 +305,10 @@ public class DatabaseManager {
 
     public void addMember(String nom, String prenom, String role, String email,
                           String description) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] addMember ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "INSERT INTO membres (nom, prenom, role, email, description) " +
@@ -297,6 +326,10 @@ public class DatabaseManager {
 
     public void updateMember(int id, String nom, String prenom, String role, String email,
                              String description) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] updateMember ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "UPDATE membres SET nom=?, prenom=?, role=?, email=?, description=? WHERE id=?")) {
@@ -313,6 +346,10 @@ public class DatabaseManager {
     }
 
     public void deleteMember(int id) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] deleteMember ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM membres WHERE id = ?")) {
             ps.setInt(1, id);
@@ -344,6 +381,10 @@ public class DatabaseManager {
     }
 
     public void addFAQ(String question, String reponse, String categorie) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] addFAQ ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "INSERT INTO faq (question, reponse, categorie) VALUES (?, ?, ?)")) {
@@ -357,6 +398,10 @@ public class DatabaseManager {
     }
 
     public void updateFAQ(int id, String question, String reponse, String categorie) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] updateFAQ ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "UPDATE faq SET question=?, reponse=?, categorie=? WHERE id=?")) {
@@ -371,6 +416,10 @@ public class DatabaseManager {
     }
 
     public void deleteFAQ(int id) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] deleteFAQ ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM faq WHERE id = ?")) {
             ps.setInt(1, id);
@@ -400,6 +449,10 @@ public class DatabaseManager {
     }
 
     public void addReseau(String type, String valeur, String libelle) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] addReseau ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "INSERT INTO reseaux_sociaux (type, valeur, libelle) VALUES (?, ?, ?)")) {
@@ -413,6 +466,10 @@ public class DatabaseManager {
     }
 
     public void updateReseau(int id, String type, String valeur, String libelle) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] updateReseau ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(
                  "UPDATE reseaux_sociaux SET type=?, valeur=?, libelle=? WHERE id=?")) {
@@ -427,6 +484,10 @@ public class DatabaseManager {
     }
 
     public void deleteReseau(int id) {
+        if (USE_POSTGRES) {
+            System.out.println("[DB] deleteReseau ignoré : base NEON en lecture seule.");
+            return;
+        }
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM reseaux_sociaux WHERE id = ?")) {
             ps.setInt(1, id);
@@ -582,7 +643,9 @@ public class DatabaseManager {
     public void shutdown() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute("SHUTDOWN");
+            if (!USE_POSTGRES) {
+                stmt.execute("SHUTDOWN");
+            }
         } catch (SQLException e) {
 
         }
