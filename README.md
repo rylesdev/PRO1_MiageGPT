@@ -8,7 +8,7 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 
 - Java 21 / JavaFX
 - API Groq (LLM)
-- Agile Scrum
+- API Neon (Database)
 
 ## Prérequis
 
@@ -17,6 +17,8 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 
 ## Configuration de l'API
 
-1. Créez un compte sur https://console.groq.com/keys et générez une clé API
-2. Lancez le projet
-3. Quand MiageGPT vous le demandera, entrez la clé API
+1. Créez un compte sur https://console.groq.com/keys et générez une clé API.
+2. Lancez le programme.
+3. Dans la fenêtre 'Configuration de la clé API GROQ', entrez votre clé et confirmez.
+
+4. Aux autres lancements du programme, vous aurez la possibilité de réutiliser la même clé sans avoir à la saisir de nouveau.
