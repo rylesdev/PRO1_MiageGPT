@@ -3,6 +3,7 @@ package com.miage.miagegpt.service;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,6 +20,7 @@ public class APIKeyDialog {
     public APIKeyDialog(Stage owner) {
         this.stage = new Stage();
         this.stage.initOwner(owner);
+        this.stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon.png")));
         this.stage.setTitle("Configuration de la clé API GROQ");
         this.stage.setWidth(500);
         this.stage.setHeight(300);
@@ -42,23 +44,21 @@ public class APIKeyDialog {
         titleLabel.setStyle("-fx-font-size: 14; -fx-font-weight: bold;");
 
         Label instructionLabel = new Label(
-            isFirstTime
-                ? "Vous devez configurer une clé API GROQ pour utiliser cette application."
-                : "Voulez-vous utiliser la même clé API ou en utiliser une nouvelle ?\n\n"
-        );
+                isFirstTime
+                        ? "Vous devez configurer une clé API GROQ pour utiliser cette application."
+                        : "Voulez-vous utiliser la même clé API ou en utiliser une nouvelle ?\n\n");
         instructionLabel.setWrapText(true);
 
         Hyperlink groqKeysLink = new Hyperlink("https://console.groq.com/keys");
         groqKeysLink.setOnAction(e -> openUrl("https://console.groq.com/keys"));
-        groqKeysLink.setVisible(isFirstTime);
-        groqKeysLink.setManaged(isFirstTime);
+        groqKeysLink.setVisible(true);
+        groqKeysLink.setManaged(true);
 
         VBox instructionBox = new VBox(4);
         instructionBox.getChildren().addAll(
-            instructionLabel,
-            new Label("Créez une clé sur :"),
-            groqKeysLink
-        );
+                instructionLabel,
+                new Label("Créez une clé sur :"),
+                groqKeysLink);
 
         if (!isFirstTime && currentKey.length > 0 && currentKey[0] != null) {
             Label currentKeyLabel = new Label("Clé actuelle: " + maskApiKey(currentKey[0]));
@@ -119,18 +119,16 @@ public class APIKeyDialog {
 
         HBox passwordBox = new HBox(10);
         passwordBox.getChildren().addAll(
-            passwordField,
-            textField,
-            showPasswordCheckBox
-        );
+                passwordField,
+                textField,
+                showPasswordCheckBox);
         HBox.setHgrow(passwordField, javafx.scene.layout.Priority.ALWAYS);
         HBox.setHgrow(textField, javafx.scene.layout.Priority.ALWAYS);
 
         root.getChildren().addAll(
-            titleLabel,
-            instructionBox,
-            passwordBox
-        );
+                titleLabel,
+                instructionBox,
+                passwordBox);
 
         HBox buttonBox = new HBox(10);
         buttonBox.setPadding(new Insets(15, 0, 0, 0));
