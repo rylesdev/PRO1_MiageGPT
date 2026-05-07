@@ -139,10 +139,10 @@ public class ChatView {
         loadSavedConversations();
 
         Scene scene = new Scene(root, 1100, 700);
-        primaryStage.setTitle("MiageGPT - JavaFX");
+        primaryStage.setTitle("MiageGPT");
         primaryStage.setScene(scene);
         try {
-            primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/icon.png")));
+            primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/icon_texte.png")));
         } catch (Exception ignored) {
         }
 

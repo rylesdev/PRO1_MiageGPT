@@ -20,7 +20,7 @@ public class APIKeyDialog {
     public APIKeyDialog(Stage owner) {
         this.stage = new Stage();
         this.stage.initOwner(owner);
-        this.stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon.png")));
+        this.stage.getIcons().add(new Image(getClass().getResourceAsStream("/icon_texte.png")));
         this.stage.setTitle("Configuration de la clé API GROQ");
         this.stage.setWidth(500);
         this.stage.setHeight(300);
@@ -47,7 +47,7 @@ public class APIKeyDialog {
                 isFirstTime
                         ? "Vous devez configurer une clé API GROQ pour utiliser cette application."
                         : "Voulez-vous utiliser la même clé API ou en utiliser une nouvelle ?\n\n");
-        instructionLabel.setWrapText(true);
+        instructionLabel.setWrapText(false);
 
         Hyperlink groqKeysLink = new Hyperlink("https://console.groq.com/keys");
         groqKeysLink.setOnAction(e -> openUrl("https://console.groq.com/keys"));
@@ -131,7 +131,11 @@ public class APIKeyDialog {
                 passwordBox);
 
         HBox buttonBox = new HBox(10);
-        buttonBox.setPadding(new Insets(15, 0, 0, 0));
+        if (isFirstTime) {
+            buttonBox.setPadding(new Insets(15, 0, 0, 0));
+        } else {
+            buttonBox.setPadding(new Insets(15, 0, 10, 0));
+        }
         buttonBox.setStyle("-fx-alignment: center-right;");
 
         if (!isFirstTime && currentKey.length > 0 && currentKey[0] != null) {
@@ -148,6 +152,12 @@ public class APIKeyDialog {
         }
 
         root.getChildren().add(buttonBox);
+
+        if (isFirstTime) {
+            stage.setHeight(300);
+        } else {
+            stage.setHeight(340);
+        }
 
         Scene scene = new Scene(root);
         stage.setScene(scene);
