@@ -1818,12 +1818,9 @@ public class ChatView {
         alert.setContentText(
                 "Vous devez configurer votre clé API Groq.\n\n" +
                         "1. Visitez: https://console.groq.com/keys\n" +
-                        "2. Créez une clé API (c'est gratuit et illimité !)\n" +
-                        "3. Ouvrez Config.java\n" +
-                        "4. Remplacez la ligne:\n" +
-                        "   public static final String GROQ_API_KEY = \"\";\n" +
-                        "   par:\n" +
-                        "   public static final String GROQ_API_KEY = \"votre_clé_ici\";\n\n" +
+                "2. Créez une clé API (c'est gratuit et illimité !)\n" +
+                "3. Lancez l'application puis saisissez la clé dans la fenêtre de configuration.\n" +
+                "4. La clé sera enregistrée automatiquement dans le fichier data/config.properties.\n\n" +
                         "C'est tout ! L'API est gratuite et illimitée.");
         alert.showAndWait();
     }
