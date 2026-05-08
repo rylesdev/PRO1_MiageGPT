@@ -1,9 +1,12 @@
 package com.miage.miagegpt.model;
 
+import com.miage.miagegpt.service.PathResolver;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 public class DatabaseManager {
@@ -12,17 +15,20 @@ public class DatabaseManager {
     private static final String DB_URL = DB_SETTINGS.url;
     private static final String DB_USER = DB_SETTINGS.user;
     private static final String DB_PASSWORD = DB_SETTINGS.password;
-    private static final boolean USE_POSTGRES = true;
 
     private static DatabaseSettings loadDatabaseSettings() {
         Properties properties = new Properties();
 
-        try (InputStream inputStream = DatabaseManager.class.getClassLoader().getResourceAsStream("database.properties")) {
-            if (inputStream != null) {
-                properties.load(inputStream);
-            }
-        } catch (Exception e) {
-            throw new IllegalStateException("Impossible de charger database.properties", e);
+        File configFile = new File(PathResolver.getDataDir(), "database.properties");
+        if (!configFile.exists()) {
+            throw new IllegalStateException(
+                    "Base NEON non configurée. Crée data/database.properties ou renseigne les variables d'environnement.");
+        }
+
+        try (InputStream inputStream = new FileInputStream(configFile)) {
+            properties.load(inputStream);
+        } catch (IOException e) {
+            throw new IllegalStateException("Impossible de charger data/database.properties", e);
         }
 
         String envUrl = System.getenv("NEON_DATABASE_URL");
@@ -281,241 +287,6 @@ public class DatabaseManager {
         return text.toLowerCase().contains(keyword.toLowerCase());
     }
 
-    public void updateAssociationInfo(String nom, String description,
-                                       String adresse, String universite, String typeAsso) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] updateAssociationInfo ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection()) {
-            conn.createStatement().execute("DELETE FROM association_info");
-            PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO association_info (nom, description, adresse, " +
-                "universite, type_asso) VALUES (?, ?, ?, ?, ?)");
-            ps.setString(1, nom);
-            ps.setString(2, description);
-            ps.setString(3, adresse);
-            ps.setString(4, universite);
-            ps.setString(5, typeAsso);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void addMember(String nom, String prenom, String role, String email,
-                          String description) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] addMember ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO membres (nom, prenom, role, email, description) " +
-                 "VALUES (?, ?, ?, ?, ?)")) {
-            ps.setString(1, nom);
-            ps.setString(2, prenom);
-            ps.setString(3, role);
-            ps.setString(4, email);
-            ps.setString(5, description);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void updateMember(int id, String nom, String prenom, String role, String email,
-                             String description) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] updateMember ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "UPDATE membres SET nom=?, prenom=?, role=?, email=?, description=? WHERE id=?")) {
-            ps.setString(1, nom);
-            ps.setString(2, prenom);
-            ps.setString(3, role);
-            ps.setString(4, email);
-            ps.setString(5, description);
-            ps.setInt(6, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void deleteMember(int id) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] deleteMember ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM membres WHERE id = ?")) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public List<String[]> getAllMembersRaw() {
-        List<String[]> list = new ArrayList<>();
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM membres ORDER BY role")) {
-            while (rs.next()) {
-                list.add(new String[]{
-                    String.valueOf(rs.getInt("id")),
-                    rs.getString("nom"),
-                    rs.getString("prenom"),
-                    rs.getString("role"),
-                    rs.getString("email"),
-                    rs.getString("description")
-                });
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-    public void addFAQ(String question, String reponse, String categorie) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] addFAQ ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO faq (question, reponse, categorie) VALUES (?, ?, ?)")) {
-            ps.setString(1, question);
-            ps.setString(2, reponse);
-            ps.setString(3, categorie);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void updateFAQ(int id, String question, String reponse, String categorie) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] updateFAQ ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "UPDATE faq SET question=?, reponse=?, categorie=? WHERE id=?")) {
-            ps.setString(1, question);
-            ps.setString(2, reponse);
-            ps.setString(3, categorie);
-            ps.setInt(4, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void deleteFAQ(int id) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] deleteFAQ ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM faq WHERE id = ?")) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public List<String[]> getAllFAQRaw() {
-        List<String[]> list = new ArrayList<>();
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM faq ORDER BY categorie")) {
-            while (rs.next()) {
-                list.add(new String[]{
-                    String.valueOf(rs.getInt("id")),
-                    rs.getString("question"),
-                    rs.getString("reponse"),
-                    rs.getString("categorie")
-                });
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-    public void addReseau(String type, String valeur, String libelle) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] addReseau ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "INSERT INTO reseaux_sociaux (type, valeur, libelle) VALUES (?, ?, ?)")) {
-            ps.setString(1, type);
-            ps.setString(2, valeur);
-            ps.setString(3, libelle);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void updateReseau(int id, String type, String valeur, String libelle) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] updateReseau ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                 "UPDATE reseaux_sociaux SET type=?, valeur=?, libelle=? WHERE id=?")) {
-            ps.setString(1, type);
-            ps.setString(2, valeur);
-            ps.setString(3, libelle);
-            ps.setInt(4, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void deleteReseau(int id) {
-        if (USE_POSTGRES) {
-            System.out.println("[DB] deleteReseau ignoré : base NEON en lecture seule.");
-            return;
-        }
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement("DELETE FROM reseaux_sociaux WHERE id = ?")) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public List<String[]> getAllReseauxRaw() {
-        List<String[]> list = new ArrayList<>();
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM reseaux_sociaux ORDER BY type")) {
-            while (rs.next()) {
-                list.add(new String[]{
-                    String.valueOf(rs.getInt("id")),
-                    rs.getString("type"),
-                    rs.getString("valeur"),
-                    rs.getString("libelle")
-                });
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
     public String getAllReseaux() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
@@ -615,39 +386,4 @@ public class DatabaseManager {
         return null;
     }
 
-    public String[] getAssociationInfoRaw() {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT * FROM association_info LIMIT 1")) {
-
-            if (rs.next()) {
-                String universite = "", typeAsso = "";
-                try {
-                    universite = rs.getString("universite") != null ? rs.getString("universite") : "";
-                    typeAsso = rs.getString("type_asso") != null ? rs.getString("type_asso") : "";
-                } catch (SQLException ignored) {}
-                return new String[]{
-                    rs.getString("nom"),
-                    rs.getString("description"),
-                    rs.getString("adresse"),
-                    universite,
-                    typeAsso
-                };
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public void shutdown() {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-            if (!USE_POSTGRES) {
-                stmt.execute("SHUTDOWN");
-            }
-        } catch (SQLException e) {
-
-        }
-    }
 }

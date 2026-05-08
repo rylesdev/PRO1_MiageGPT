@@ -46,9 +46,4 @@ public class QuestionAnalyzer {
 
         return prompt.toString();
     }
-
-    @Deprecated
-    public String buildEnrichedPrompt(String userQuestion, String dbContext) {
-        return buildSystemPrompt(dbContext) + "\nQuestion de l'utilisateur : " + userQuestion;
-    }
 }
