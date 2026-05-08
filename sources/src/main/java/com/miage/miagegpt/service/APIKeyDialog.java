@@ -4,6 +4,8 @@ import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -53,6 +55,7 @@ public class APIKeyDialog {
         groqKeysLink.setOnAction(e -> openUrl("https://console.groq.com/keys"));
         groqKeysLink.setVisible(true);
         groqKeysLink.setManaged(true);
+        groqKeysLink.setFocusTraversable(false);
 
         VBox instructionBox = new VBox(4);
         instructionBox.getChildren().addAll(
@@ -160,7 +163,20 @@ public class APIKeyDialog {
         }
 
         Scene scene = new Scene(root);
+        
+        // Ajouter un écouteur de clavier pour la touche Entrée
+        final Button defaultButton = (keepButton != null) ? keepButton : confirmButton;
+        scene.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                defaultButton.fire();
+                event.consume();
+            }
+        });
+        
         stage.setScene(scene);
+        
+        // Donner le focus au bouton par défaut
+        stage.setOnShown(event -> defaultButton.requestFocus());
         stage.showAndWait();
 
         return resultApiKey;
