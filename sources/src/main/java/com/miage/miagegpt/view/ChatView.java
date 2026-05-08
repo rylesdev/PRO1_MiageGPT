@@ -3,7 +3,6 @@ package com.miage.miagegpt.view;
 import com.miage.miagegpt.controller.ChatController;
 import com.miage.miagegpt.model.ConversationManager;
 import com.miage.miagegpt.service.APIResponse;
-import com.miage.miagegpt.service.Config;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
