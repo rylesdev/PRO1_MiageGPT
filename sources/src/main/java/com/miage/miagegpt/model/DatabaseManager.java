@@ -11,18 +11,18 @@ import java.util.Properties;
 
 public class DatabaseManager {
 
-    private static final DatabaseSettings DB_SETTINGS = loadDatabaseSettings();
-    private static final String DB_URL = DB_SETTINGS.url;
-    private static final String DB_USER = DB_SETTINGS.user;
-    private static final String DB_PASSWORD = DB_SETTINGS.password;
+    private static final DatabaseSettings DB_SETTINGS = tryLoadDatabaseSettings();
+    private static final String DB_URL = DB_SETTINGS != null ? DB_SETTINGS.url : null;
+    private static final String DB_USER = DB_SETTINGS != null ? DB_SETTINGS.user : null;
+    private static final String DB_PASSWORD = DB_SETTINGS != null ? DB_SETTINGS.password : null;
 
-    private static DatabaseSettings loadDatabaseSettings() {
+    private static DatabaseSettings tryLoadDatabaseSettings() {
         Properties properties = new Properties();
 
         File configFile = new File(PathResolver.getDataDir(), "database.properties");
         if (!configFile.exists()) {
-            throw new IllegalStateException(
-                    "Base NEON non configurée. Crée data/database.properties ou renseigne les variables d'environnement.");
+            System.err.println("[DB] Aucun fichier data/database.properties trouvé — base NEON non configurée.");
+            return null;
         }
 
         try (InputStream inputStream = new FileInputStream(configFile)) {
@@ -41,7 +41,8 @@ public class DatabaseManager {
         String password = firstNonEmpty(envPassword, properties.getProperty("database.password"));
 
         if (url == null || url.isEmpty()) {
-            throw new IllegalStateException("Base NEON non configurée. Renseigne database.properties ou les variables d'environnement.");
+            System.err.println("[DB] URL de la base absente dans database.properties et variables d'environnement.");
+            return null;
         }
 
         if (url.startsWith("postgres://")) {
@@ -59,7 +60,8 @@ public class DatabaseManager {
         }
 
         if (!url.startsWith("jdbc:postgresql:")) {
-            throw new IllegalStateException("DATABASE_URL doit être une URL PostgreSQL.");
+            System.err.println("[DB] DATABASE_URL doit être une URL PostgreSQL.");
+            return null;
         }
 
         System.out.println("[DB] Utilisation de la base Postgres NEON: " + url);
@@ -103,6 +105,9 @@ public class DatabaseManager {
         } catch (ClassNotFoundException e) {
             System.err.println("[DB] Driver Postgres introuvable : " + e.getMessage());
         }
+        if (DB_URL == null || DB_URL.isEmpty()) {
+            throw new SQLException("Base de données non configurée (DB_URL manquante)");
+        }
         if (DB_USER != null && !DB_USER.isEmpty()) {
             return DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
         }
@@ -110,12 +115,14 @@ public class DatabaseManager {
     }
 
     private void initDatabase() {
+        if (DB_URL == null || DB_URL.isEmpty()) {
+            System.out.println("[DB] Ignorer l'initialisation de la DB (non configurée).");
+            return;
+        }
+
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-
             System.out.println("[DB] Connexion NEON initialisée.");
-
             System.out.println("[DB] Base de données initialisée avec succès !");
-
         } catch (SQLException e) {
             System.err.println("[DB] Erreur lors de l'initialisation : " + e.getMessage());
             e.printStackTrace();
