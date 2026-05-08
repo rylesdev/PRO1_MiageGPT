@@ -9,8 +9,7 @@ out/
 # =====================
 # Local database / secrets
 # =====================
-data/*.mv.db
-data/*.trace.db
+MiageGPT-Data/
 
 # =====================
 # Logs
