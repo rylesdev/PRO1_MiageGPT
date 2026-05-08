@@ -21,14 +21,14 @@ public class DatabaseManager {
 
         File configFile = new File(PathResolver.getDataDir(), "database.properties");
         if (!configFile.exists()) {
-            System.err.println("[DB] Aucun fichier data/database.properties trouvé — base NEON non configurée.");
+            System.err.println("[DB] Aucun fichier MiageGPT-Data/database.properties trouvé — base NEON non configurée.");
             return null;
         }
 
         try (InputStream inputStream = new FileInputStream(configFile)) {
             properties.load(inputStream);
         } catch (IOException e) {
-            throw new IllegalStateException("Impossible de charger data/database.properties", e);
+            throw new IllegalStateException("Impossible de charger MiageGPT-Data/database.properties", e);
         }
 
         String envUrl = System.getenv("NEON_DATABASE_URL");

@@ -67,10 +67,6 @@ public class ChatView {
     }
 
     public void initialize(Stage primaryStage) {
-        if (!Config.isApiKeyConfigured()) {
-            showAPIKeyError();
-            return;
-        }
         VBox sidebar = createSidebar();
 
         chatBox = new VBox(20);
@@ -1809,20 +1805,6 @@ public class ChatView {
             currentMessageThread.interrupt();
             currentMessageThread = null;
         }
-    }
-
-    private void showAPIKeyError() {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Clé API manquante");
-        alert.setHeaderText("Configuration requise");
-        alert.setContentText(
-                "Vous devez configurer votre clé API Groq.\n\n" +
-                        "1. Visitez: https://console.groq.com/keys\n" +
-                "2. Créez une clé API (c'est gratuit et illimité !)\n" +
-                "3. Lancez l'application puis saisissez la clé dans la fenêtre de configuration.\n" +
-                "4. La clé sera enregistrée automatiquement dans le fichier data/config.properties.\n\n" +
-                        "C'est tout ! L'API est gratuite et illimitée.");
-        alert.showAndWait();
     }
 
     private void updatePromptsButtonStyle() {
