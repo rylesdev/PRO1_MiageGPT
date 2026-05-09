@@ -64,7 +64,6 @@ public class DatabaseManager {
             return null;
         }
 
-        System.out.println("[DB] Utilisation de la base Postgres NEON: " + url);
         return new DatabaseSettings(url, user != null ? user : "", password != null ? password : "");
     }
 
@@ -116,13 +115,10 @@ public class DatabaseManager {
 
     private void initDatabase() {
         if (DB_URL == null || DB_URL.isEmpty()) {
-            System.out.println("[DB] Ignorer l'initialisation de la DB (non configurée).");
             return;
         }
 
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
-            System.out.println("[DB] Connexion NEON initialisée.");
-            System.out.println("[DB] Base de données initialisée avec succès !");
         } catch (SQLException e) {
             System.err.println("[DB] Erreur lors de l'initialisation : " + e.getMessage());
             e.printStackTrace();
@@ -258,40 +254,6 @@ public class DatabaseManager {
             e.printStackTrace();
         }
         return null;
-    }
-
-    public String globalSearch(String keyword) {
-        StringBuilder results = new StringBuilder();
-
-        String assoInfo = getAssociationInfo();
-        if (assoInfo != null && containsKeyword(assoInfo, keyword)) {
-            results.append("[ASSOCIATION]\n").append(assoInfo).append("\n\n");
-        }
-
-        String members = searchMemberByRole(keyword);
-        if (members != null) {
-            results.append("[MEMBRES]\n").append(members).append("\n");
-        }
-        String membersByName = searchMemberByName(keyword);
-        if (membersByName != null && (members == null || !members.equals(membersByName))) {
-            results.append("[MEMBRES]\n").append(membersByName).append("\n");
-        }
-
-        String faq = searchFAQ(keyword);
-        if (faq != null) {
-            results.append("[FAQ]\n").append(faq).append("\n");
-        }
-
-        String reseaux = searchReseaux(keyword);
-        if (reseaux != null) {
-            results.append("[RÉSEAUX / LIENS]\n").append(reseaux).append("\n");
-        }
-
-        return results.length() > 0 ? results.toString() : null;
-    }
-
-    private boolean containsKeyword(String text, String keyword) {
-        return text.toLowerCase().contains(keyword.toLowerCase());
     }
 
     public String getAllReseaux() {

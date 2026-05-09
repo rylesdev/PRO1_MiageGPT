@@ -71,7 +71,7 @@ public class GroqAPIService {
                     }
                     currentRole = "user";
                     currentContent = new StringBuilder(line.substring(6));
-                } else if (line.startsWith("Assistant: ")) {
+                } else if (line.startsWith("MiageGPT: ")) {
                     if (currentRole != null && currentContent.length() > 0) {
                         messages.append(",{\"role\": \"")
                                 .append(currentRole)
@@ -80,7 +80,7 @@ public class GroqAPIService {
                                 .append("\"}");
                     }
                     currentRole = "assistant";
-                    currentContent = new StringBuilder(line.substring(11));
+                    currentContent = new StringBuilder(line.substring(10));
                 } else {
                     currentContent.append("\n").append(line);
                 }

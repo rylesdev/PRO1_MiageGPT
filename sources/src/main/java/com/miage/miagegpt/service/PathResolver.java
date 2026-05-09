@@ -16,7 +16,6 @@ public class PathResolver {
             File f = new File(explicit.trim());
             f.mkdirs();
             dataDir = f;
-            System.out.println("[PathResolver] MiageGPT-Data via propriété système : " + dataDir.getAbsolutePath());
             return dataDir;
         }
 
@@ -26,10 +25,8 @@ public class PathResolver {
             File miageDataDir = new File(jarDir, "MiageGPT-Data");
             miageDataDir.mkdirs();
             dataDir = miageDataDir;
-            System.out.println("[PathResolver] MiageGPT-Data à côté du jar : " + dataDir.getAbsolutePath());
             return dataDir;
         } catch (URISyntaxException | NullPointerException e) {
-            System.out.println("[PathResolver] Impossible de trouver le chemin du jar, fallback sur user.dir");
         }
 
         File userDir = new File(System.getProperty("user.dir"));
@@ -45,7 +42,6 @@ public class PathResolver {
         }
         candidate.mkdirs();
         dataDir = candidate;
-        System.out.println("[PathResolver] MiageGPT-Data via user.dir : " + dataDir.getAbsolutePath());
         return dataDir;
     }
 }

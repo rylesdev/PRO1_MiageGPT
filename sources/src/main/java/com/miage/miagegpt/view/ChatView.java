@@ -41,7 +41,6 @@ public class ChatView {
     private javafx.scene.layout.StackPane summarizeBtn;
     private TextArea inputField;
     private Button sendBtn;
-    private Runnable defaultSendHandler;
 
     private Map<String, String> conversationHistory = new HashMap<>();
 
@@ -82,14 +81,15 @@ public class ChatView {
         statsLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 12px; -fx-padding: 10;");
 
         summarizeBtn = createGradientButton("✨ Résumer la conversation", this::summarizeConversation);
-        HBox.setMargin(summarizeBtn, new Insets(0, 0, 0, 30));
+        HBox.setMargin(summarizeBtn, new Insets(0, 0, 0, 42));
 
         exportBtn = new Button("💾 Exporter");
         exportBtn.setOnAction(e -> exportConversation());
         exportBtn.setStyle("-fx-font-size: 12px; -fx-padding: 10 12; -fx-font-weight: bold;");
         addHoverScaleEffect(exportBtn);
         updateExportButtonStyle();
-        HBox.setMargin(exportBtn, new Insets(0, 0, 0, 10));
+        HBox.setMargin(exportBtn, new Insets(0, 0, 0, 16));
+        HBox.setMargin(statsLabel, new Insets(0, 0, 0, 24));
 
         themeToggleBtn = new Button();
         themeToggleBtn.setPrefSize(44, 44);
@@ -106,7 +106,7 @@ public class ChatView {
         header.setStyle("-fx-background-color: #343541;");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        header.getChildren().addAll(dateTimeLabel, statsLabel, summarizeBtn, exportBtn, spacer,
+        header.getChildren().addAll(dateTimeLabel, summarizeBtn, exportBtn, statsLabel, spacer,
                 themeToggleBtn);
 
         centerPane = new BorderPane();
@@ -255,7 +255,8 @@ public class ChatView {
 
                     Label textLabel = new Label(item);
                     textLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 13px;");
-                    textLabel.setMaxWidth(Double.MAX_VALUE);
+                    textLabel.setMaxWidth(180);
+                    textLabel.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
                     HBox.setHgrow(textLabel, Priority.ALWAYS);
 
                     if (item.equals(currentConversation)) {
@@ -429,7 +430,6 @@ public class ChatView {
                 });
             }
         };
-        defaultSendHandler = sendMessage;
         applySendHandler(sendMessage);
 
         inputArea.getChildren().add(inputBox);
@@ -616,11 +616,11 @@ public class ChatView {
                                                 java.util.regex.Matcher.quoteReplacement(newTurn));
                                     } else {
                                         String oldAssistantLine = (historyBefore != null && !historyBefore.isEmpty())
-                                                ? historyBefore + "\nAssistant: " + previousResponse
-                                                : "Assistant: " + previousResponse;
+                                                ? historyBefore + "\nMiageGPT: " + previousResponse
+                                                : "MiageGPT: " + previousResponse;
                                         String newAssistantLine = (historyBefore != null && !historyBefore.isEmpty())
-                                                ? historyBefore + "\nAssistant: " + newResponse
-                                                : "Assistant: " + newResponse;
+                                                ? historyBefore + "\nMiageGPT: " + newResponse
+                                                : "MiageGPT: " + newResponse;
 
                                         if (fullHistory.contains(oldAssistantLine)) {
                                             updatedHistory = fullHistory.replaceFirst(
@@ -822,8 +822,6 @@ public class ChatView {
             conversationMessageCounts.put(conversationName, 0);
 
             conversationHistory.put(conversationName, "");
-
-            addWelcomeMessage();
         }
 
         scrollPane.setContent(chatBox);
@@ -838,24 +836,62 @@ public class ChatView {
     }
 
     private void renameConversation(String oldName) {
-        TextInputDialog dialog = new TextInputDialog(oldName);
+        final int MAX_NAME_LEN = 15;
+
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Renommer la conversation");
         dialog.setHeaderText("Entrez un nouveau nom pour cette conversation :");
-        dialog.setContentText("Nom :");
+
+        ButtonType okButtonType = new ButtonType("Valider", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
+
+        TextField nameField = new TextField(oldName);
+        nameField.setPromptText("Nom");
+
+        Label errorLabel = new Label();
+        errorLabel.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 11px;");
+        errorLabel.setWrapText(true);
+
+        VBox content = new VBox(8);
+        content.getChildren().addAll(new Label("Nom :"), nameField, errorLabel);
+        dialog.getDialogPane().setContent(content);
+
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
+        Runnable refreshValidation = () -> {
+            String trimmed = nameField.getText() == null ? "" : nameField.getText().trim();
+            boolean tooLong = trimmed.length() > MAX_NAME_LEN;
+            boolean empty = trimmed.isEmpty();
+            boolean unchanged = trimmed.equals(oldName);
+            boolean duplicate = !empty && !unchanged && conversations.containsKey(trimmed);
+
+            if (tooLong) {
+                errorLabel.setText("Le nom est trop long. Maximum : " + MAX_NAME_LEN + " caractères.");
+            } else if (duplicate) {
+                errorLabel.setText("Une conversation porte déjà ce nom.");
+            } else if (empty) {
+                errorLabel.setText("Le nom ne peut pas être vide.");
+            } else if (unchanged) {
+                errorLabel.setText("Modifiez le nom avant de valider.");
+            } else {
+                errorLabel.setText("");
+            }
+
+            okButton.setDisable(tooLong || empty || unchanged || duplicate);
+        };
+
+        nameField.textProperty().addListener((obs, oldValue, newValue) -> refreshValidation.run());
+        refreshValidation.run();
+
+        dialog.setResultConverter(button -> {
+            if (button == okButtonType) {
+                String trimmed = nameField.getText() == null ? "" : nameField.getText().trim();
+                return trimmed;
+            }
+            return null;
+        });
 
         dialog.showAndWait().ifPresent(newName -> {
-            String trimmed = newName.trim();
-            if (!trimmed.isEmpty() && !trimmed.equals(oldName)) {
-                if (conversations.containsKey(trimmed)) {
-                    Alert alert = new Alert(Alert.AlertType.WARNING);
-                    alert.setTitle("Nom déjà utilisé");
-                    alert.setHeaderText("Une conversation porte déjà ce nom.");
-                    alert.setContentText("Choisissez un nom différent pour éviter les doublons.");
-                    alert.showAndWait();
-                    return;
-                }
-                newName = trimmed;
-
+            if (!newName.isEmpty() && !newName.equals(oldName)) {
                 int index = historyList.getItems().indexOf(oldName);
                 if (index >= 0) {
                     historyList.getItems().set(index, newName);
@@ -939,21 +975,8 @@ public class ChatView {
         }
     }
 
-    private void addWelcomeMessage() {
-        VBox welcomeBox = new VBox(15);
-        welcomeBox.setAlignment(Pos.CENTER);
-        welcomeBox.setPadding(new Insets(50));
+    
 
-        Label title = new Label("MiageGPT");
-        title.setFont(Font.font("System", FontWeight.BOLD, 32));
-        title.setStyle("-fx-text-fill: " + (isDarkMode ? "white" : "#1F2937") + ";");
-
-        Label subtitle = new Label("Pose-moi tes questions sur la MIAGE et l'AMS !");
-        subtitle.setStyle("-fx-text-fill: " + (isDarkMode ? "#8E8EA0" : "#6B7280") + "; -fx-font-size: 16px;");
-
-        welcomeBox.getChildren().addAll(title, subtitle);
-        chatBox.getChildren().add(welcomeBox);
-    }
 
     private void showWelcomeScreen() {
         String bgColor = isDarkMode ? "#343541" : "#FFFFFF";
@@ -1162,7 +1185,7 @@ public class ChatView {
                     if (!newHistory.isEmpty()) {
                         newHistory += "\n";
                     }
-                    newHistory += "Assistant: " + summary;
+                    newHistory += "MiageGPT: " + summary;
                     conversationHistory.put(currentConversation, newHistory);
                     saveCurrentConversation();
 
@@ -1715,27 +1738,22 @@ public class ChatView {
     }
 
     private void exportConversation() {
-        String history = conversationHistory.getOrDefault(currentConversation, "");
-        if (history.isEmpty()) {
+        if (currentConversation == null || currentConversation.isBlank()) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("Conversation vide");
-            alert.setHeaderText("Cette conversation n'a pas de messages");
+            alert.setTitle("Aucune conversation sélectionnée");
+            alert.setHeaderText("Sélectionnez une conversation à exporter");
             alert.showAndWait();
             return;
         }
 
         try {
-            String fileName = currentConversation.replaceAll("[^a-zA-Z0-9]", "_") + "_" +
-                    java.time.LocalDateTime.now()
-                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
-                    +
-                    ".txt";
+            String fileName = currentConversation.replaceAll("[^a-zA-Z0-9]", "_") + ".txt";
 
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Enregistrer la conversation");
             fileChooser.setInitialFileName(fileName);
             fileChooser.getExtensionFilters().addAll(
-                    new FileChooser.ExtensionFilter("Fichiers texte", "*.txt"),
+                new FileChooser.ExtensionFilter("Fichiers texte", "*.txt"),
                     new FileChooser.ExtensionFilter("Tous les fichiers", "*.*"));
 
             File selectedFile = fileChooser.showSaveDialog(root.getScene().getWindow());
@@ -1743,7 +1761,7 @@ public class ChatView {
                 return;
             }
 
-            controller.exportConversation(history, selectedFile);
+            controller.exportConversation(currentConversation, selectedFile);
 
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Export réussi");
@@ -1779,7 +1797,6 @@ public class ChatView {
             historyList.getItems().add(data.name);
         }
 
-        System.out.println("[MiageGPT] " + savedConversations.size() + " conversation(s) chargée(s) depuis le disque");
     }
 
     private VBox rebuildConversationUI(String history) {
@@ -1787,16 +1804,7 @@ public class ChatView {
         convBox.setPadding(new Insets(20));
         convBox.setStyle("-fx-background-color: #343541;");
 
-        VBox welcomeMsg = new VBox(15);
-        welcomeMsg.setAlignment(Pos.CENTER);
-        welcomeMsg.setPadding(new Insets(50));
-        Label title = new Label("MiageGPT");
-        title.setFont(Font.font("System", FontWeight.BOLD, 32));
-        title.setStyle("-fx-text-fill: " + (isDarkMode ? "white" : "#1F2937") + ";");
-        Label subtitle = new Label("Pose-moi tes questions sur la MIAGE et l'AMS !");
-        subtitle.setStyle("-fx-text-fill: " + (isDarkMode ? "#8E8EA0" : "#6B7280") + "; -fx-font-size: 16px;");
-        welcomeMsg.getChildren().addAll(title, subtitle);
-        convBox.getChildren().add(welcomeMsg);
+        
 
         if (history == null || history.trim().isEmpty()) {
             return convBox;
@@ -1944,6 +1952,5 @@ public class ChatView {
                     null,
                     conversationMessageCounts.getOrDefault(name, 0));
         }
-        System.out.println("[MiageGPT] " + conversations.size() + " conversation(s) sauvegardée(s)");
     }
 }

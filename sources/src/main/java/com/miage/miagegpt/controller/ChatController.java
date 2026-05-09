@@ -7,8 +7,6 @@ import com.miage.miagegpt.service.Config;
 import com.miage.miagegpt.service.GroqAPIService;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -20,7 +18,6 @@ public class ChatController {
     public ChatController() {
 
         DatabaseManager.getInstance();
-        System.out.println("[MiageGPT] Base de données chargée !");
 
         this.groqService = new GroqAPIService(Config.getGROQ_API_KEY());
         this.conversationManager = new ConversationManager();
@@ -56,21 +53,8 @@ public class ChatController {
         conversationManager.renameConversation(oldName, newName, date, history, language, messageCount);
     }
 
-    public void exportConversation(String history, File file) throws Exception {
-        StringBuilder exportedHistory = new StringBuilder();
-        String[] lines = history.split("\n");
-        for (String line : lines) {
-            if (line.startsWith("Assistant:")) {
-                exportedHistory.append("MiageGPT :").append(line.substring("Assistant:".length())).append("\n");
-            } else {
-                exportedHistory.append(line).append("\n");
-            }
-        }
-        String finalContent = exportedHistory.toString();
-        if (finalContent.endsWith("\n")) {
-            finalContent = finalContent.substring(0, finalContent.length() - 1);
-        }
-        Files.write(file.toPath(), finalContent.getBytes(StandardCharsets.UTF_8));
+    public void exportConversation(String conversationName, File file) throws Exception {
+        conversationManager.exportConversationFile(conversationName, file);
     }
 
     public String buildTurn(String historyBefore, String userPrompt, String assistantResponse) {
@@ -78,7 +62,7 @@ public class ChatController {
         if (historyBefore != null && !historyBefore.isEmpty()) {
             sb.append(historyBefore).append("\n");
         }
-        sb.append("User: ").append(userPrompt).append("\nAssistant: ").append(assistantResponse);
+        sb.append("User: ").append(userPrompt).append("\nMiageGPT: ").append(assistantResponse);
         return sb.toString();
     }
 
@@ -97,12 +81,12 @@ public class ChatController {
                 }
                 currentRole = "user";
                 currentMessage = new StringBuilder(line.substring(6));
-            } else if (line.startsWith("Assistant: ")) {
+            } else if (line.startsWith("MiageGPT: ")) {
                 if (currentRole != null) {
                     messages.add(new String[]{currentRole, currentMessage.toString()});
                 }
                 currentRole = "assistant";
-                currentMessage = new StringBuilder(line.substring(11));
+                currentMessage = new StringBuilder(line.substring(10));
             } else {
                 if (currentRole != null) {
                     currentMessage.append("\n").append(line);

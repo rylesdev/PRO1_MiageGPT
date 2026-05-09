@@ -70,7 +70,6 @@ public class Config {
 
         try (OutputStream outputStream = new FileOutputStream(configFile)) {
             properties.store(outputStream, "MiageGPT local configuration");
-            System.out.println("[Config] Clé API GROQ sauvegardée dans " + configFile.getAbsolutePath());
         } catch (IOException e) {
             System.err.println("[Config] Erreur lors de l'écriture de la clé API: " + e.getMessage());
         }
@@ -90,13 +89,4 @@ public class Config {
         return GROQ_API_KEY != null && !GROQ_API_KEY.isBlank();
     }
 
-    public static String getConfigurationError() {
-        if (GROQ_API_KEY == null || GROQ_API_KEY.isBlank()) {
-            return "Clé API non configurée. Visitez https://console.groq.com/keys";
-        }
-        if (!GROQ_API_KEY.startsWith("gsk_")) {
-            return "Clé API invalide.";
-        }
-        return null;
-    }
 }

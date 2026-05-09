@@ -18,7 +18,6 @@ public class ConversationManager {
 
     public ConversationManager() {
         this.conversationsFolder = findConversationsFolder();
-        System.out.println("[ConversationManager] Dossier conversations: " + conversationsFolder.getAbsolutePath());
     }
 
     private File findConversationsFolder() {
@@ -37,8 +36,6 @@ public class ConversationManager {
             writer.write("name=" + name);
             writer.newLine();
             writer.write("date=" + (date != null ? date.format(DATE_FORMAT) : ""));
-            writer.newLine();
-            writer.write("language=" + (language != null ? language : ""));
             writer.newLine();
             writer.write("messageCount=" + messageCount);
             writer.newLine();
@@ -140,6 +137,16 @@ public class ConversationManager {
             String history, String language, int messageCount) {
         deleteConversation(oldName);
         saveConversation(newName, date, history, language, messageCount);
+    }
+
+    public void exportConversationFile(String name, File destinationFile) throws IOException {
+        String safeFileName = toSafeFileName(name) + ".conv";
+        File sourceFile = new File(conversationsFolder, safeFileName);
+        if (!sourceFile.exists()) {
+            throw new FileNotFoundException("Fichier source introuvable pour la conversation : " + name);
+        }
+        // Copier le fichier .conv en .txt
+        Files.copy(sourceFile.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
     }
 
     private String toSafeFileName(String name) {
