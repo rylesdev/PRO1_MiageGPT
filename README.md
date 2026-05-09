@@ -20,5 +20,4 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 1. Créez un compte sur https://console.groq.com/keys et générez une clé API.
 2. Lancez le programme.
 3. Dans la fenêtre 'Configuration de la clé API GROQ', entrez votre clé et confirmez.
-
 4. Aux autres lancements du programme, vous aurez la possibilité de réutiliser la même clé sans avoir à la saisir de nouveau.
