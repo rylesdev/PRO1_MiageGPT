@@ -8,16 +8,32 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 
 - Java 21 / JavaFX
 - API Groq (LLM)
-- API Neon (Database)
+- Agile Scrum
+
+## Téléchargement
+
+Une release est disponible directement sur GitHub, permettant de lancer l'application sans compiler le projet.
+
+Rendez-vous dans l'onglet **Releases** du repository et téléchargez le fichier `miagegpt-1.0-SNAPSHOT.jar`.
+
+Java 21+ doit être installé sur votre machine pour exécuter le fichier.
 
 ## Prérequis
 
 - Java 21+
-- Une clé API Groq disponible sur https://console.groq.com/keys
+- Une clé API Groq (gratuite)
 
-## Configuration de l'API
+## Configuration de la clé API
 
-1. Créez un compte sur https://console.groq.com/keys et générez une clé API.
-2. Lancez le programme.
-3. Dans la fenêtre 'Configuration de la clé API GROQ', entrez votre clé et confirmez.
-4. Aux autres lancements du programme, vous aurez la possibilité de réutiliser la même clé sans avoir à la saisir de nouveau.
+Au premier lancement, une fenêtre de configuration s'affiche automatiquement. Voici les étapes à suivre :
+
+1. Cliquez sur le lien https://console.groq.com/keys dans la fenêtre
+2. Créez un compte ou connectez-vous sur le site Groq
+3. Cliquez sur **Create API Key** et copiez la clé générée (elle commence par `gsk_`)
+4. Collez la clé dans le champ de la fenêtre de configuration
+5. Cliquez sur **Confirmer**
+
+Aux lancements suivants, deux options sont disponibles :
+
+- **Garder la clé actuelle** : se connecter automatiquement avec la dernière clé utilisée
+- **Utiliser cette clé** : saisir une nouvelle clé API
