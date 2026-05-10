@@ -32,6 +32,7 @@ public class ChatView {
     private Map<String, Long> conversationStartTimes = new HashMap<>();
     private String currentConversation = null;
     private ListView<String> historyList;
+    private Label historyLabel;
     private Label dateTimeLabel;
     private Label statsLabel;
     private BorderPane centerPane;
@@ -67,11 +68,11 @@ public class ChatView {
 
         chatBox = new VBox(20);
         chatBox.setPadding(new Insets(20));
-        chatBox.setStyle("-fx-background-color: #343541;");
+        chatBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
 
         scrollPane = new ScrollPane(chatBox);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: #343541; -fx-background-color: #343541;");
+        scrollPane.setStyle("-fx-background: rgba(8, 107, 174); -fx-background-color: rgba(8, 107, 174);");
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         dateTimeLabel = new Label();
@@ -104,7 +105,7 @@ public class ChatView {
         HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(15, 15, 15, 15));
-        header.setStyle("-fx-background-color: #343541;");
+        header.setStyle("-fx-background-color: rgba(8, 107, 174);");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         header.getChildren().addAll(dateTimeLabel, summarizeBtn, exportBtn, statsLabel, spacer,
@@ -113,7 +114,7 @@ public class ChatView {
         centerPane = new BorderPane();
         centerPane.setTop(header);
         centerPane.setCenter(scrollPane);
-        centerPane.setStyle("-fx-background-color: #343541;");
+        centerPane.setStyle("-fx-background-color: rgba(8, 107, 174);");
 
         showWelcomeScreen();
         inputArea = createInputArea();
@@ -143,9 +144,9 @@ public class ChatView {
         sidebar.setPadding(new Insets(10));
         sidebar.setMinWidth(260);
         sidebar.setMaxWidth(260);
-        sidebar.setStyle("-fx-background-color: #202123;");
-
-        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream("/icon_logo.png")));
+        sidebar.setStyle("-fx-background-color: rgba(26, 69, 111);");
+        String logoPath = isDarkMode ? "/icon_logo_sombre.png" : "/icon_logo_clair.png";
+        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream(logoPath)));
         logoView.setPreserveRatio(true);
         logoView.setFitWidth(240);
         logoView.setSmooth(true);
@@ -169,7 +170,7 @@ public class ChatView {
 
             VBox newChatBox = new VBox(20);
             newChatBox.setPadding(new Insets(20));
-            newChatBox.setStyle("-fx-background-color: #343541;");
+            newChatBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
             conversations.put(conversationName, newChatBox);
             conversationDates.put(conversationName, LocalDateTime.now());
             conversationStartTimes.put(conversationName, System.currentTimeMillis());
@@ -188,7 +189,7 @@ public class ChatView {
 
         HBox topBar = new HBox(10);
         topBar.setPadding(new Insets(10));
-        topBar.setStyle("-fx-background-color: #202123;");
+        topBar.setStyle("-fx-background-color: rgba(26, 69, 111);");
         topBar.getChildren().add(newChatBtn);
         HBox.setHgrow(newChatBtn, Priority.ALWAYS);
 
@@ -205,7 +206,7 @@ public class ChatView {
 
         HBox bottomBar = new HBox(15);
         bottomBar.setPadding(new Insets(10));
-        bottomBar.setStyle("-fx-background-color: #202123;");
+        bottomBar.setStyle("-fx-background-color: rgba(26, 69, 111);");
         bottomBar.setAlignment(Pos.CENTER_LEFT);
         bottomBar.getChildren().addAll(connBox, pingLabel);
 
@@ -228,14 +229,14 @@ public class ChatView {
             root.setBottom(null);
         });
 
-        Label historyLabel = new Label("Historique");
+        historyLabel = new Label("Historique");
         historyLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 11px; -fx-padding: 10 5 5 5;");
 
         historyList = new ListView<>();
 
         historyList.setStyle(
-                "-fx-background-color: #202123; " +
-                        "-fx-control-inner-background: #202123; " +
+                "-fx-background-color: rgba(26, 69, 111); " +
+                        "-fx-control-inner-background: rgba(26, 69, 111); " +
                         "-fx-text-fill: white;");
         historyList.setCellFactory(lv -> new ListCell<String>() {
 
@@ -282,36 +283,36 @@ public class ChatView {
 
                     cellBox.getChildren().add(leftBox);
 
-                        HBox actionBox = new HBox(5);
-                        actionBox.setAlignment(Pos.CENTER_RIGHT);
-                        actionBox.setVisible(false);
-                        actionBox.setManaged(false);
+                    HBox actionBox = new HBox(5);
+                    actionBox.setAlignment(Pos.CENTER_RIGHT);
+                    actionBox.setVisible(false);
+                    actionBox.setManaged(false);
 
-                        String baseActionStyle = "-fx-background-color: transparent; -fx-text-fill: #8E8EA0; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
-                        String renameHoverStyle = "-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
-                        String deleteHoverStyle = "-fx-background-color: transparent; -fx-text-fill: #FF6B6B; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
+                    String baseActionStyle = "-fx-background-color: transparent; -fx-text-fill: #8E8EA0; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
+                    String renameHoverStyle = "-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
+                    String deleteHoverStyle = "-fx-background-color: transparent; -fx-text-fill: #FF6B6B; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
 
-                        Button renameBtn = new Button("✎");
-                        addHoverScaleEffect(renameBtn);
-                        renameBtn.setStyle(baseActionStyle);
-                        renameBtn.setOnMouseEntered(e -> renameBtn.setStyle(renameHoverStyle));
-                        renameBtn.setOnMouseExited(e -> renameBtn.setStyle(baseActionStyle));
-                        renameBtn.setOnAction(e -> {
+                    Button renameBtn = new Button("✎");
+                    addHoverScaleEffect(renameBtn);
+                    renameBtn.setStyle(baseActionStyle);
+                    renameBtn.setOnMouseEntered(e -> renameBtn.setStyle(renameHoverStyle));
+                    renameBtn.setOnMouseExited(e -> renameBtn.setStyle(baseActionStyle));
+                    renameBtn.setOnAction(e -> {
                         e.consume();
                         renameConversation(item);
-                        });
+                    });
 
-                        Button deleteBtn = new Button("🗑");
-                        addHoverScaleEffect(deleteBtn);
-                        deleteBtn.setStyle(baseActionStyle);
-                        deleteBtn.setOnMouseEntered(e -> deleteBtn.setStyle(deleteHoverStyle));
-                        deleteBtn.setOnMouseExited(e -> deleteBtn.setStyle(baseActionStyle));
-                        deleteBtn.setOnAction(e -> {
+                    Button deleteBtn = new Button("🗑");
+                    addHoverScaleEffect(deleteBtn);
+                    deleteBtn.setStyle(baseActionStyle);
+                    deleteBtn.setOnMouseEntered(e -> deleteBtn.setStyle(deleteHoverStyle));
+                    deleteBtn.setOnMouseExited(e -> deleteBtn.setStyle(baseActionStyle));
+                    deleteBtn.setOnAction(e -> {
                         e.consume();
                         deleteConversation(item);
-                        });
+                    });
 
-                        actionBox.getChildren().addAll(renameBtn, deleteBtn);
+                    actionBox.getChildren().addAll(renameBtn, deleteBtn);
                     cellBox.getChildren().add(actionBox);
 
                     setGraphic(cellBox);
@@ -459,7 +460,7 @@ public class ChatView {
 
         String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
         String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
 
         messageBox.setStyle(
                 "-fx-background-color: " + messageBg + "; " +
@@ -516,7 +517,7 @@ public class ChatView {
 
         String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
         String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
 
         messageBox.setStyle(
                 "-fx-background-color: " + messageBg + "; " +
@@ -826,7 +827,7 @@ public class ChatView {
         if (chatBox == null) {
             chatBox = new VBox(20);
             chatBox.setPadding(new Insets(20));
-            chatBox.setStyle("-fx-background-color: #343541;");
+            chatBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
             conversations.put(conversationName, chatBox);
             conversationDates.put(conversationName, LocalDateTime.now());
             conversationStartTimes.put(conversationName, System.currentTimeMillis());
@@ -986,13 +987,10 @@ public class ChatView {
         }
     }
 
-    
-
-
     private void showWelcomeScreen() {
-        String bgColor = isDarkMode ? "#343541" : "#FFFFFF";
+        String bgColor = isDarkMode ? "rgba(8, 107, 174)" : "#FFFFFF";
         String textColor = isDarkMode ? "white" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
 
         welcomeBox = new VBox(25);
         welcomeBox.setAlignment(Pos.CENTER);
@@ -1329,7 +1327,7 @@ public class ChatView {
     private void applyInputAreaBackground(VBox target) {
         if (target == null)
             return;
-        String bg = isDarkMode ? "#343541" : "#FFFFFF";
+        String bg = isDarkMode ? "rgba(8, 107, 174)" : "#FFFFFF";
         target.setStyle("-fx-background-color: " + bg + ";");
     }
 
@@ -1339,7 +1337,7 @@ public class ChatView {
         }
         String bg = isDarkMode ? "#40414F" : "#ECECF1";
         String text = isDarkMode ? "#111827" : "#111827";
-        String prompt = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String prompt = isDarkMode ? "#8E8EA0" : "#4B5563";
         String border = isDarkMode ? "transparent" : "#6B7280";
 
         inputField.setStyle(
@@ -1372,17 +1370,17 @@ public class ChatView {
 
     private void applyTheme() {
 
-        String darkBg = "#343541";
-        String darkSidebar = "#202123";
+        String darkBg = "rgba(8, 107, 174)";
+        String darkSidebar = "rgba(26, 69, 111)";
         String darkMessageBg = "#444654";
         String darkText = "#ECECF1";
-        String darkSecondary = "#8E8EA0";
+        String darkSecondary = "#c8c8c8";
 
         String lightBg = "#FFFFFF";
-        String lightSidebar = "#F5F5F5";
+        String lightSidebar = "#C8C8C8";
         String lightMessageBg = "#E8F4F8";
         String lightText = "#1F2937";
-        String lightSecondary = "#6B7280";
+        String lightSecondary = "#4B5563";
 
         String bgColor = isDarkMode ? darkBg : lightBg;
         String sidebarColor = isDarkMode ? darkSidebar : lightSidebar;
@@ -1402,11 +1400,33 @@ public class ChatView {
         VBox sidebar = (VBox) root.getLeft();
         sidebar.setStyle("-fx-background-color: " + sidebarColor + ";");
 
+        try {
+            if (!sidebar.getChildren().isEmpty()) {
+                javafx.scene.Node first = sidebar.getChildren().get(0);
+                if (first instanceof StackPane) {
+                    StackPane logoContainer = (StackPane) first;
+                    if (!logoContainer.getChildren().isEmpty()
+                            && logoContainer.getChildren().get(0) instanceof ImageView) {
+                        ImageView logoView = (ImageView) logoContainer.getChildren().get(0);
+                        String logoPath = isDarkMode ? "/icon_logo_sombre.png" : "/icon_logo_clair.png";
+                        try {
+                            logoView.setImage(new Image(getClass().getResourceAsStream(logoPath)));
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         HBox header = (HBox) centerPane.getTop();
         header.setStyle("-fx-background-color: " + bgColor + ";");
 
         dateTimeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 12px; -fx-padding: 10;");
         statsLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 12px; -fx-padding: 10;");
+        if (historyLabel != null) {
+            historyLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px; -fx-padding: 10 5 5 5;");
+        }
 
         for (javafx.scene.Node node : sidebar.getChildren()) {
             if (node instanceof HBox) {
@@ -1472,7 +1492,6 @@ public class ChatView {
                 btnLabel.setTextFill(javafx.scene.paint.Color.web(btnText));
             }
         }
-
 
     }
 
@@ -1764,7 +1783,7 @@ public class ChatView {
             fileChooser.setTitle("Enregistrer la conversation");
             fileChooser.setInitialFileName(fileName);
             fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Fichiers texte", "*.txt"),
+                    new FileChooser.ExtensionFilter("Fichiers texte", "*.txt"),
                     new FileChooser.ExtensionFilter("Tous les fichiers", "*.*"));
 
             File selectedFile = fileChooser.showSaveDialog(root.getScene().getWindow());
@@ -1813,9 +1832,7 @@ public class ChatView {
     private VBox rebuildConversationUI(String history) {
         VBox convBox = new VBox(20);
         convBox.setPadding(new Insets(20));
-        convBox.setStyle("-fx-background-color: #343541;");
-
-        
+        convBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
 
         if (history == null || history.trim().isEmpty()) {
             return convBox;
@@ -1845,7 +1862,7 @@ public class ChatView {
 
         String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
         String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
 
         messageBox.setStyle(
                 "-fx-background-color: " + messageBg + "; " +
@@ -1889,7 +1906,7 @@ public class ChatView {
 
         String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
         String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#6B7280";
+        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
 
         messageBox.setStyle(
                 "-fx-background-color: " + messageBg + "; " +
