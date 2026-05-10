@@ -204,10 +204,36 @@ public class GroqAPIService {
 
     public boolean testConnection() {
         try {
-            String response = getResponseWithHistory("Bonjour", "");
-            return !response.contains("Erreur");
+            int code = testApiKeyStatus();
+            return code == 200;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    public int testApiKeyStatus() throws Exception {
+        java.net.URLConnection urlConnection = new java.net.URI(API_URL).toURL().openConnection();
+        HttpURLConnection connection = (HttpURLConnection) urlConnection;
+
+        try {
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + apiKey);
+            connection.setConnectTimeout(TIMEOUT);
+            connection.setReadTimeout(TIMEOUT);
+            connection.setDoOutput(true);
+
+            String testBody = "{\"model\": \"llama-3.3-70b-versatile\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1,\"temperature\":0.0,\"top_p\":0.1}";
+
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = testBody.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = connection.getResponseCode();
+            return responseCode;
+        } finally {
+            connection.disconnect();
         }
     }
 }

@@ -107,8 +107,18 @@ public class APIKeyDialog {
         confirmButton.setOnAction(e -> {
             String input = showPasswordCheckBox.isSelected() ? textField.getText() : passwordField.getText();
             if (validateApiKey(input)) {
-                resultApiKey = input;
-                stage.close();
+                try {
+                    GroqAPIService service = new GroqAPIService(input);
+                    int status = service.testApiKeyStatus();
+                    if (status == 200) {
+                        resultApiKey = input;
+                        stage.close();
+                    } else if (status == 401) {
+                        showError("Clé refusée par l'API (401). Vérifiez votre clé.");
+                    }
+                } catch (Exception ex) {
+                    showError("Erreur lors du test de la clé API.");
+                }
             } else {
                 showError("Clé API invalide. Elle doit commencer par 'gsk_'.");
             }
@@ -145,8 +155,22 @@ public class APIKeyDialog {
             keepButton.setPrefWidth(150);
             keepButton.setStyle("-fx-font-size: 12; -fx-padding: 8;");
             keepButton.setOnAction(e -> {
-                resultApiKey = currentKey[0];
-                stage.close();
+                try {
+                    GroqAPIService service = new GroqAPIService(currentKey[0]);
+                    int status = service.testApiKeyStatus();
+                    if (status == 200) {
+                        resultApiKey = currentKey[0];
+                        stage.close();
+                    } else if (status == 401) {
+                        showError("Clé actuelle refusée par l'API (401). Veuillez en fournir une autre.");
+                    } else if (status <= 0) {
+                        showError("Impossible de tester la clé actuelle: erreur réseau.");
+                    } else {
+                        showError("Erreur lors du test de la clé actuelle (code " + status + ").");
+                    }
+                } catch (Exception ex) {
+                    showError("Erreur réseau lors du test de la clé: " + ex.getMessage());
+                }
             });
             buttonBox.getChildren().addAll(keepButton, confirmButton, cancelButton);
         } else {
