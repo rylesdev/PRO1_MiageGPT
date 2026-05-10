@@ -9,6 +9,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -143,6 +144,16 @@ public class ChatView {
         sidebar.setMinWidth(260);
         sidebar.setMaxWidth(260);
         sidebar.setStyle("-fx-background-color: #202123;");
+
+        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream("/icon_logo.png")));
+        logoView.setPreserveRatio(true);
+        logoView.setFitWidth(240);
+        logoView.setSmooth(true);
+
+        StackPane logoContainer = new StackPane(logoView);
+        logoContainer.setAlignment(Pos.CENTER);
+        logoContainer.setMaxWidth(Double.MAX_VALUE);
+        logoContainer.setPadding(new Insets(0, 0, 6, 0));
 
         newChatBtn = new Button("+ Nouvelle conversation");
         newChatBtn.setMaxWidth(Double.MAX_VALUE);
@@ -342,7 +353,7 @@ public class ChatView {
         homeBtnContainer.getChildren().add(homeBtn);
 
         VBox.setVgrow(historyList, Priority.ALWAYS);
-        sidebar.getChildren().addAll(homeBtnContainer, topBar, historyLabel, historyList, bottomBar);
+        sidebar.getChildren().addAll(logoContainer, homeBtnContainer, topBar, historyLabel, historyList, bottomBar);
 
         return sidebar;
     }
