@@ -14,7 +14,7 @@ L'application permet aux étudiants d'obtenir des réponses rapides sur les cour
 
 Une release est disponible directement sur GitHub, permettant de lancer l'application sans compiler le projet.
 
-Rendez-vous dans l'onglet **Releases** du repository et téléchargez le fichier `miagegpt-1.0-SNAPSHOT.jar`.
+Rendez-vous dans l'onglet **Releases** du repository et téléchargez la dernière version du fichier `MiageGPT-SNAPSHOT.jar`.
 
 Java 21+ doit être installé sur votre machine pour exécuter le fichier.
 
