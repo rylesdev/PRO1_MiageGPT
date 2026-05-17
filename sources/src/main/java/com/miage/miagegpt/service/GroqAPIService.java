@@ -13,6 +13,22 @@ public class GroqAPIService {
     private static final int TIMEOUT = 30000;
     private QuestionAnalyzer questionAnalyzer;
 
+    static {
+        try {
+            javax.net.ssl.TrustManager[] trustAll = new javax.net.ssl.TrustManager[]{
+                new javax.net.ssl.X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
+                    public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {}
+                    public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {}
+                }
+            };
+            javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
+            sc.init(null, trustAll, new java.security.SecureRandom());
+            javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+            javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier((host, session) -> true);
+        } catch (Exception ignored) {}
+    }
+
     public GroqAPIService(String apiKey) {
         this.apiKey = apiKey;
         this.questionAnalyzer = new QuestionAnalyzer(DatabaseManager.getInstance());

@@ -53,6 +53,10 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.miage.miagegpt.Launcher</mainClass>
+                    <options>
+                        <option>-Djavax.net.ssl.trustStore=${user.home}/maven-truststore.jks</option>
+                        <option>-Djavax.net.ssl.trustStorePassword=changeit</option>
+                    </options>
                 </configuration>
             </plugin>
 

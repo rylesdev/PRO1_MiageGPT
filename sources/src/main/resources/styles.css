@@ -1,0 +1,265 @@
+/* ===== MiageGPT Stylesheet ===== */
+
+/* Static (theme-independent) */
+
+.user-author {
+    -fx-text-fill: #19C37D;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.ai-author {
+    -fx-text-fill: #10A37F;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.message-box {
+    -fx-padding: 15;
+    -fx-background-radius: 10;
+}
+
+.send-btn {
+    -fx-background-color: #000000;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 12;
+    -fx-min-width: 46px;
+    -fx-min-height: 46px;
+    -fx-pref-width: 46px;
+    -fx-pref-height: 46px;
+    -fx-background-radius: 23px;
+    -fx-cursor: hand;
+}
+
+.copy-btn {
+    -fx-font-size: 11px;
+    -fx-padding: 4 6;
+    -fx-background-radius: 4;
+    -fx-background-color: #6B7280;
+    -fx-text-fill: white;
+}
+
+.reload-btn {
+    -fx-font-size: 11px;
+    -fx-padding: 4 6;
+    -fx-background-radius: 4;
+    -fx-background-color: #10A37F;
+    -fx-text-fill: white;
+}
+
+.new-chat-btn {
+    -fx-background-color: #0EA5E9;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-padding: 10;
+    -fx-cursor: hand;
+    -fx-border-color: #0EA5E9;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.connection-ok {
+    -fx-text-fill: #10A37F;
+    -fx-font-size: 11px;
+}
+
+.connection-ko {
+    -fx-text-fill: #EF4444;
+    -fx-font-size: 11px;
+}
+
+.ping-label {
+    -fx-text-fill: #8E8EA0;
+    -fx-font-size: 10px;
+}
+
+/* ===== Dark mode ===== */
+
+.dark-mode { -fx-background-color: #086BAE; }
+
+.dark-mode .sidebar      { -fx-background-color: #1A456F; }
+.dark-mode .sidebar-bar  { -fx-background-color: #1A456F; }
+.dark-mode .center-pane  { -fx-background-color: #086BAE; }
+.dark-mode .header-bar   { -fx-background-color: #086BAE; }
+.dark-mode .chat-box     { -fx-background-color: #086BAE; }
+.dark-mode .input-area   { -fx-background-color: #086BAE; }
+
+.dark-mode .message-box  { -fx-background-color: #444654; }
+
+.dark-mode .message-text {
+    -fx-text-fill: #ECECF1;
+    -fx-font-size: 14px;
+}
+
+.dark-mode .timestamp-label {
+    -fx-text-fill: #c8c8c8;
+    -fx-font-size: 11px;
+}
+
+.dark-mode .secondary-label {
+    -fx-text-fill: #c8c8c8;
+    -fx-font-size: 11px;
+    -fx-padding: 10 5 5 5;
+}
+
+.dark-mode .header-secondary-label {
+    -fx-text-fill: #c8c8c8;
+    -fx-font-size: 12px;
+    -fx-padding: 10;
+}
+
+.dark-mode .input-field {
+    -fx-background-color: #40414F;
+    -fx-text-fill: #111827;
+    -fx-highlight-fill: #2563EB;
+    -fx-highlight-text-fill: #111827;
+    -fx-prompt-text-fill: #8E8EA0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0.3;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 12;
+    -fx-font-size: 14px;
+    -fx-font-family: 'Segoe UI', Arial;
+}
+
+.dark-mode .theme-toggle {
+    -fx-background-color: #2A2B32;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+    -fx-border-color: #565869;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-pref-width: 180px;
+    -fx-pref-height: 44px;
+}
+
+.dark-mode .home-btn {
+    -fx-background-color: #2A2B32;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-padding: 10;
+    -fx-cursor: hand;
+    -fx-border-color: #565869;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.dark-mode .export-btn {
+    -fx-background-color: #2A2B32;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+    -fx-border-color: #565869;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+}
+
+.dark-mode .history-list {
+    -fx-background-color: #1A456F;
+    -fx-control-inner-background: #1A456F;
+}
+
+/* ===== Light mode ===== */
+
+.light-mode { -fx-background-color: #FFFFFF; }
+
+.light-mode .sidebar      { -fx-background-color: #C8C8C8; }
+.light-mode .sidebar-bar  { -fx-background-color: #C8C8C8; }
+.light-mode .center-pane  { -fx-background-color: #FFFFFF; }
+.light-mode .header-bar   { -fx-background-color: #FFFFFF; }
+.light-mode .chat-box     { -fx-background-color: #FFFFFF; }
+.light-mode .input-area   { -fx-background-color: #FFFFFF; }
+
+.light-mode .message-box  { -fx-background-color: #E8F4F8; }
+
+.light-mode .message-text {
+    -fx-text-fill: #1F2937;
+    -fx-font-size: 14px;
+}
+
+.light-mode .timestamp-label {
+    -fx-text-fill: #4B5563;
+    -fx-font-size: 11px;
+}
+
+.light-mode .secondary-label {
+    -fx-text-fill: #4B5563;
+    -fx-font-size: 11px;
+    -fx-padding: 10 5 5 5;
+}
+
+.light-mode .header-secondary-label {
+    -fx-text-fill: #4B5563;
+    -fx-font-size: 12px;
+    -fx-padding: 10;
+}
+
+.light-mode .input-field {
+    -fx-background-color: #ECECF1;
+    -fx-text-fill: #111827;
+    -fx-highlight-fill: #BFDBFE;
+    -fx-highlight-text-fill: #111827;
+    -fx-prompt-text-fill: #4B5563;
+    -fx-border-color: #6B7280;
+    -fx-border-width: 0.3;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 12;
+    -fx-font-size: 14px;
+    -fx-font-family: 'Segoe UI', Arial;
+}
+
+.light-mode .theme-toggle {
+    -fx-background-color: #E5E7EB;
+    -fx-text-fill: #111827;
+    -fx-font-size: 13px;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+    -fx-border-color: #D1D5DB;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-pref-width: 180px;
+    -fx-pref-height: 44px;
+}
+
+.light-mode .home-btn {
+    -fx-background-color: #E5E7EB;
+    -fx-text-fill: #111827;
+    -fx-font-size: 13px;
+    -fx-padding: 10;
+    -fx-cursor: hand;
+    -fx-border-color: #D1D5DB;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.light-mode .export-btn {
+    -fx-background-color: #E5F0F7;
+    -fx-text-fill: #111827;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+    -fx-border-color: #C5D8E8;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+}
+
+.light-mode .history-list {
+    -fx-background-color: #C8C8C8;
+    -fx-control-inner-background: #C8C8C8;
+}

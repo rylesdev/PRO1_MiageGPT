@@ -9,7 +9,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -31,15 +30,11 @@ public class ChatView {
     private Map<String, Integer> conversationMessageCounts = new HashMap<>();
     private Map<String, Long> conversationStartTimes = new HashMap<>();
     private String currentConversation = null;
-    private ListView<String> historyList;
-    private Label historyLabel;
     private Label dateTimeLabel;
     private Label statsLabel;
     private BorderPane centerPane;
     private VBox inputArea;
     private BorderPane root;
-    private Button newChatBtn;
-    private Button homeBtn;
     private javafx.scene.layout.StackPane summarizeBtn;
     private TextArea inputField;
     private Button sendBtn;
@@ -51,10 +46,10 @@ public class ChatView {
 
     private boolean isDarkMode = false;
     private Button themeToggleBtn;
-    private Label connectionIndicator;
     private ChatController controller;
     private Button exportBtn;
     private String lastPingValue = "Ping: --ms";
+    private ConversationSidebar sidebar;
 
     private Thread currentMessageThread = null;
     private volatile boolean stopMessageDisplay = false;
@@ -64,48 +59,51 @@ public class ChatView {
     }
 
     public void initialize(Stage primaryStage) {
-        VBox sidebar = createSidebar();
+        sidebar = new ConversationSidebar(
+                this::onNewChat,
+                this::onSwitchConversation,
+                this::renameConversation,
+                this::deleteConversation,
+                this::onHome,
+                () -> isDarkMode,
+                () -> currentConversation);
+        VBox sidebarNode = sidebar.build();
 
         chatBox = new VBox(20);
         chatBox.setPadding(new Insets(20));
-        chatBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
+        chatBox.getStyleClass().add("chat-box");
 
         scrollPane = new ScrollPane(chatBox);
         scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background: rgba(8, 107, 174); -fx-background-color: rgba(8, 107, 174);");
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         dateTimeLabel = new Label();
-        dateTimeLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 12px; -fx-padding: 10;");
+        dateTimeLabel.getStyleClass().add("header-secondary-label");
         updateDateTimeLabel();
 
         statsLabel = new Label();
-        statsLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 12px; -fx-padding: 10;");
+        statsLabel.getStyleClass().add("header-secondary-label");
 
         summarizeBtn = createGradientButton("✨ Résumer la conversation", this::summarizeConversation);
         HBox.setMargin(summarizeBtn, new Insets(0, 0, 0, 42));
 
         exportBtn = new Button("💾 Exporter");
         exportBtn.setOnAction(e -> exportConversation());
-        exportBtn.setStyle("-fx-font-size: 12px; -fx-padding: 10 12; -fx-font-weight: bold;");
+        exportBtn.getStyleClass().add("export-btn");
         addHoverScaleEffect(exportBtn);
-        updateExportButtonStyle();
         HBox.setMargin(exportBtn, new Insets(0, 0, 0, 16));
         HBox.setMargin(statsLabel, new Insets(0, 0, 0, 24));
 
         themeToggleBtn = new Button();
-        themeToggleBtn.setPrefSize(44, 44);
-        themeToggleBtn.setMinSize(44, 44);
-        themeToggleBtn.setMaxSize(44, 44);
+        themeToggleBtn.getStyleClass().add("theme-toggle");
         updateThemeButtonLabel();
         addHoverScaleEffect(themeToggleBtn);
         themeToggleBtn.setOnAction(e -> toggleTheme());
-        updateThemeButtonStyle();
 
         HBox header = new HBox(8);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(15, 15, 15, 15));
-        header.setStyle("-fx-background-color: rgba(8, 107, 174);");
+        header.getStyleClass().add("header-bar");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         header.getChildren().addAll(dateTimeLabel, summarizeBtn, exportBtn, statsLabel, spacer,
@@ -114,19 +112,19 @@ public class ChatView {
         centerPane = new BorderPane();
         centerPane.setTop(header);
         centerPane.setCenter(scrollPane);
-        centerPane.setStyle("-fx-background-color: rgba(8, 107, 174);");
+        centerPane.getStyleClass().add("center-pane");
 
         showWelcomeScreen();
         inputArea = createInputArea();
         root = new BorderPane();
-        root.setLeft(sidebar);
+        root.setLeft(sidebarNode);
         root.setCenter(centerPane);
         applyTheme();
-        updateThemeButtonStyle();
 
         loadSavedConversations();
 
         Scene scene = new Scene(root, 1100, 700);
+        scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
         primaryStage.setTitle("MiageGPT");
         primaryStage.setScene(scene);
         try {
@@ -139,232 +137,55 @@ public class ChatView {
         primaryStage.show();
     }
 
-    private VBox createSidebar() {
-        VBox sidebar = new VBox(10);
-        sidebar.setPadding(new Insets(10));
-        sidebar.setMinWidth(260);
-        sidebar.setMaxWidth(260);
-        sidebar.setStyle("-fx-background-color: rgba(26, 69, 111);");
-        String logoPath = isDarkMode ? "/icon_logo_sombre.png" : "/icon_logo_clair.png";
-        ImageView logoView = new ImageView(new Image(getClass().getResourceAsStream(logoPath)));
-        logoView.setPreserveRatio(true);
-        logoView.setFitWidth(240);
-        logoView.setSmooth(true);
 
-        StackPane logoContainer = new StackPane(logoView);
-        logoContainer.setAlignment(Pos.CENTER);
-        logoContainer.setMaxWidth(Double.MAX_VALUE);
-        logoContainer.setPadding(new Insets(0, 0, 6, 0));
+    private void onNewChat() {
+        int conversationNumber = conversations.size() + 1;
+        String baseName = "Conversation ";
+        String conversationName = baseName + conversationNumber;
+        while (conversations.containsKey(conversationName)) {
+            conversationNumber++;
+            conversationName = baseName + conversationNumber;
+        }
 
-        newChatBtn = new Button("+ Nouvelle conversation");
-        newChatBtn.setMaxWidth(Double.MAX_VALUE);
-        newChatBtn.setOnAction(e -> {
+        VBox newChatBox = new VBox(20);
+        newChatBox.setPadding(new Insets(20));
+        newChatBox.getStyleClass().add("chat-box");
+        conversations.put(conversationName, newChatBox);
+        conversationDates.put(conversationName, LocalDateTime.now());
+        conversationStartTimes.put(conversationName, System.currentTimeMillis());
+        conversationMessageCounts.put(conversationName, 0);
 
-            int conversationNumber = conversations.size() + 1;
-            String baseName = "Conversation ";
-            String conversationName = baseName + conversationNumber;
-            while (conversations.containsKey(conversationName)) {
-                conversationNumber++;
-                conversationName = baseName + conversationNumber;
-            }
+        sidebar.getHistoryList().getItems().add(0, conversationName);
 
-            VBox newChatBox = new VBox(20);
-            newChatBox.setPadding(new Insets(20));
-            newChatBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
-            conversations.put(conversationName, newChatBox);
-            conversationDates.put(conversationName, LocalDateTime.now());
-            conversationStartTimes.put(conversationName, System.currentTimeMillis());
-            conversationMessageCounts.put(conversationName, 0);
+        switchConversation(conversationName);
+        sidebar.refresh();
+        saveCurrentConversation();
 
-            historyList.getItems().add(0, conversationName);
+        root.setBottom(inputArea);
+    }
 
+    private void onSwitchConversation(String conversationName) {
+        if (conversations.containsKey(conversationName)) {
             switchConversation(conversationName);
-            historyList.refresh();
-            saveCurrentConversation();
-
-            root.setBottom(inputArea);
-        });
-        addHoverScaleEffect(newChatBtn);
-        updateNewChatButtonStyle();
-
-        HBox topBar = new HBox(10);
-        topBar.setPadding(new Insets(10));
-        topBar.setStyle("-fx-background-color: rgba(26, 69, 111);");
-        topBar.getChildren().add(newChatBtn);
-        HBox.setHgrow(newChatBtn, Priority.ALWAYS);
-
-        HBox connBox = new HBox(8);
-        connBox.setAlignment(Pos.CENTER);
-        Label connLabel = new Label("Connecté");
-        connLabel.setStyle("-fx-text-fill: #10A37F; -fx-font-size: 11px;");
-        connBox.getChildren().add(connLabel);
-        connectionIndicator = connLabel;
-
-        Label pingLabel = new Label("Ping: --ms");
-        pingLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 10px;");
-        pingLabel.setPadding(new Insets(0, 10, 0, 0));
-
-        HBox bottomBar = new HBox(15);
-        bottomBar.setPadding(new Insets(10));
-        bottomBar.setStyle("-fx-background-color: rgba(26, 69, 111);");
-        bottomBar.setAlignment(Pos.CENTER_LEFT);
-        bottomBar.getChildren().addAll(connBox, pingLabel);
-
-        homeBtn = new Button("🏠 Page d'accueil");
-        addHoverScaleEffect(homeBtn);
-        homeBtn.setStyle(
-                "-fx-background-color: #2A2B32; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 13px; " +
-                        "-fx-padding: 10; " +
-                        "-fx-cursor: hand; " +
-                        "-fx-border-color: #565869; " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 5; " +
-                        "-fx-background-radius: 5;");
-        homeBtn.setOnAction(e -> {
-            currentConversation = null;
-            showWelcomeScreen();
-            applyTheme();
-            root.setBottom(null);
-        });
-
-        historyLabel = new Label("Historique");
-        historyLabel.setStyle("-fx-text-fill: #8E8EA0; -fx-font-size: 11px; -fx-padding: 10 5 5 5;");
-
-        historyList = new ListView<>();
-
-        historyList.setStyle(
-                "-fx-background-color: rgba(26, 69, 111); " +
-                        "-fx-control-inner-background: rgba(26, 69, 111); " +
-                        "-fx-text-fill: white;");
-        historyList.setCellFactory(lv -> new ListCell<String>() {
-
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setStyle("-fx-background-color: transparent;");
-                    // Clear any mouse handlers that may have been set when the cell was reused
-                    setOnMouseEntered(null);
-                    setOnMouseExited(null);
-                    setOnMouseClicked(null);
-                    setOnMousePressed(null);
-                } else {
-                    String textColor = isDarkMode ? "#ECECF1" : "#0F172A";
-                    String hoverBg = isDarkMode ? "#2A2B32" : "#E1ECF4";
-                    String activeBg = isDarkMode ? "#2A2B32" : "#D7E8F5";
-                    String indicatorColor = isDarkMode ? "#19C37D" : "#0F766E";
-
-                    HBox cellBox = new HBox(8);
-                    cellBox.setAlignment(Pos.CENTER_LEFT);
-
-                    HBox leftBox = new HBox(8);
-                    leftBox.setAlignment(Pos.CENTER_LEFT);
-                    HBox.setHgrow(leftBox, Priority.ALWAYS);
-
-                    Label textLabel = new Label(item);
-                    textLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 13px;");
-                    textLabel.setMaxWidth(180);
-                    textLabel.setTextOverrun(javafx.scene.control.OverrunStyle.ELLIPSIS);
-                    HBox.setHgrow(textLabel, Priority.ALWAYS);
-
-                    if (item.equals(currentConversation)) {
-                        Label indicator = new Label("●");
-                        indicator.setStyle("-fx-text-fill: " + indicatorColor + "; -fx-font-size: 10px;");
-                        leftBox.getChildren().addAll(indicator, textLabel);
-                        setStyle("-fx-background-color: " + activeBg + "; -fx-padding: 8 10; -fx-cursor: hand;");
-                    } else {
-                        leftBox.getChildren().add(textLabel);
-                        setStyle("-fx-background-color: transparent; -fx-padding: 8 10; -fx-cursor: hand;");
-                    }
-
-                    cellBox.getChildren().add(leftBox);
-
-                    HBox actionBox = new HBox(5);
-                    actionBox.setAlignment(Pos.CENTER_RIGHT);
-                    actionBox.setVisible(false);
-                    actionBox.setManaged(false);
-
-                    String baseActionStyle = "-fx-background-color: transparent; -fx-text-fill: #8E8EA0; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
-                    String renameHoverStyle = "-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
-                    String deleteHoverStyle = "-fx-background-color: transparent; -fx-text-fill: #FF6B6B; -fx-font-size: 14px; -fx-padding: 2 6; -fx-cursor: hand;";
-
-                    Button renameBtn = new Button("✎");
-                    addHoverScaleEffect(renameBtn);
-                    renameBtn.setStyle(baseActionStyle);
-                    renameBtn.setOnMouseEntered(e -> renameBtn.setStyle(renameHoverStyle));
-                    renameBtn.setOnMouseExited(e -> renameBtn.setStyle(baseActionStyle));
-                    renameBtn.setOnAction(e -> {
-                        e.consume();
-                        renameConversation(item);
-                    });
-
-                    Button deleteBtn = new Button("🗑");
-                    addHoverScaleEffect(deleteBtn);
-                    deleteBtn.setStyle(baseActionStyle);
-                    deleteBtn.setOnMouseEntered(e -> deleteBtn.setStyle(deleteHoverStyle));
-                    deleteBtn.setOnMouseExited(e -> deleteBtn.setStyle(baseActionStyle));
-                    deleteBtn.setOnAction(e -> {
-                        e.consume();
-                        deleteConversation(item);
-                    });
-
-                    actionBox.getChildren().addAll(renameBtn, deleteBtn);
-                    cellBox.getChildren().add(actionBox);
-
-                    setGraphic(cellBox);
-                    setText(null);
-
-                    setOnMouseEntered(e -> {
-                        actionBox.setVisible(true);
-                        actionBox.setManaged(true);
-                        if (!item.equals(currentConversation)) {
-                            setStyle("-fx-background-color: " + hoverBg + "; -fx-padding: 8 10; -fx-cursor: hand;");
-                        }
-                    });
-                    setOnMouseExited(e -> {
-                        actionBox.setVisible(false);
-                        actionBox.setManaged(false);
-                        if (!item.equals(currentConversation)) {
-                            setStyle("-fx-background-color: transparent; -fx-padding: 8 10; -fx-cursor: hand;");
-                        }
-                    });
-                }
+            sidebar.refresh();
+            if (root.getBottom() == null) {
+                root.setBottom(inputArea);
             }
-        });
+        }
+    }
 
-        historyList.setOnMouseClicked(e -> {
-            String selectedConv = historyList.getSelectionModel().getSelectedItem();
-            if (selectedConv != null && !selectedConv.isEmpty() && e.getClickCount() == 1
-                    && conversations.containsKey(selectedConv)) {
-                switchConversation(selectedConv);
-                historyList.refresh();
-
-                if (root.getBottom() == null) {
-                    root.setBottom(inputArea);
-                }
-            }
-        });
-
-        HBox homeBtnContainer = new HBox();
-        homeBtnContainer.setAlignment(Pos.CENTER);
-        homeBtnContainer.getChildren().add(homeBtn);
-
-        VBox.setVgrow(historyList, Priority.ALWAYS);
-        sidebar.getChildren().addAll(logoContainer, homeBtnContainer, topBar, historyLabel, historyList, bottomBar);
-
-        return sidebar;
+    private void onHome() {
+        currentConversation = null;
+        showWelcomeScreen();
+        applyTheme();
+        root.setBottom(null);
     }
 
     private VBox createInputArea() {
         VBox inputArea = new VBox(10);
         inputArea.setPadding(new Insets(20, 20, 20, 20));
         inputArea.setAlignment(Pos.CENTER);
-
-        applyInputAreaBackground(inputArea);
+        inputArea.getStyleClass().add("input-area");
 
         inputField = new TextArea();
         inputField.setPromptText("Envoyez un message...");
@@ -372,21 +193,10 @@ public class ChatView {
         inputField.setWrapText(true);
         inputField.setMaxHeight(150);
         inputField.setMaxWidth(800);
-        updateInputFieldStyle();
+        inputField.getStyleClass().add("input-field");
 
-        sendBtn = new Button("➤");
-        sendBtn.setStyle(
-                "-fx-background-color: #000000ff; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 16px; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 12 12; " +
-                        "-fx-min-width: 46; " +
-                        "-fx-min-height: 46; " +
-                        "-fx-pref-width: 46; " +
-                        "-fx-pref-height: 46; " +
-                        "-fx-background-radius: 23; " +
-                        "-fx-cursor: hand;");
+        sendBtn = new Button("âž¤");
+        sendBtn.getStyleClass().add("send-btn");
 
         HBox inputBox = new HBox(10, inputField, sendBtn);
         HBox.setHgrow(inputField, Priority.ALWAYS);
@@ -400,50 +210,9 @@ public class ChatView {
     }
 
     private void addUserMessage(String text) {
-        HBox messageRow = new HBox();
-        messageRow.setAlignment(Pos.CENTER_RIGHT);
-        messageRow.setPadding(new Insets(10, 0, 10, 0));
-        messageRow.setId("user-message-row");
-
-        VBox messageBox = new VBox(5);
-        messageBox.setMaxWidth(700);
-        messageBox.setId("user-message-box");
-
-        String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
-        String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
-
-        messageBox.setStyle(
-                "-fx-background-color: " + messageBg + "; " +
-                        "-fx-padding: 15; " +
-                        "-fx-background-radius: 10;");
-
-        Label authorLabel = new Label("Vous");
-        authorLabel.setId("user-author");
-        authorLabel.setStyle("-fx-text-fill: #19C37D; -fx-font-weight: bold; -fx-font-size: 13px;");
-
-        Label messageLabel = new Label(text);
-        messageLabel.setWrapText(true);
-        messageLabel.setId("user-message-text");
-        messageLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 14px;");
-
-        LocalDateTime now = LocalDateTime.now();
-        String timeStamp = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-        Label timeLabel = new Label(timeStamp);
-        timeLabel.setId("user-time");
-        timeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-
-        messageBox.getChildren().addAll(authorLabel, messageLabel, timeLabel);
-
-        java.util.Map<String, Label> labelMap = new java.util.HashMap<>();
-        labelMap.put("author", authorLabel);
-        labelMap.put("text", messageLabel);
-        labelMap.put("time", timeLabel);
-        messageBox.setUserData(labelMap);
-
-        messageRow.getChildren().add(messageBox);
-
-        chatBox.getChildren().add(messageRow);
+        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+        MessageBubble bubble = MessageBubble.forUser(text, timeStamp);
+        chatBox.getChildren().add(bubble.row);
 
         int count = conversationMessageCounts.getOrDefault(currentConversation, 0);
         conversationMessageCounts.put(currentConversation, count + 1);
@@ -457,68 +226,14 @@ public class ChatView {
     }
 
     private void addAIMessage(String text, String sourcePrompt, String historyBefore) {
-        HBox messageRow = new HBox();
-        messageRow.setAlignment(Pos.CENTER_LEFT);
-        messageRow.setPadding(new Insets(10, 0, 10, 0));
-        messageRow.setId("ai-message-row");
-
-        VBox messageBox = new VBox(5);
-        messageBox.setMaxWidth(700);
-        messageBox.setId("ai-message-box");
-
-        String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
-        String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
-
-        messageBox.setStyle(
-                "-fx-background-color: " + messageBg + "; " +
-                        "-fx-padding: 15; " +
-                        "-fx-background-radius: 10;");
-
-        Label authorLabel = new Label("MiageGPT");
-        authorLabel.setId("ai-author");
-        authorLabel.setStyle("-fx-text-fill: #10A37F; -fx-font-weight: bold; -fx-font-size: 13px;");
-
-        Label messageLabel = new Label("");
-        messageLabel.setWrapText(true);
-        messageLabel.setId("ai-message-text");
-        messageLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 14px;");
-
-        LocalDateTime now = LocalDateTime.now();
-        String timeStamp = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-        Label timeLabel = new Label(timeStamp);
-        timeLabel.setId("ai-time");
-        timeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-
-        messageBox.getChildren().addAll(authorLabel, messageLabel, timeLabel);
-
-        java.util.Map<String, Label> labelMap = new java.util.HashMap<>();
-        labelMap.put("author", authorLabel);
-        labelMap.put("text", messageLabel);
-        labelMap.put("time", timeLabel);
-        messageBox.setUserData(labelMap);
-
+        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
         final String[] currentText = { text };
-        Button copyBtn = new Button("📋");
-        copyBtn.setStyle(
-                "-fx-font-size: 11px; -fx-padding: 4 6; -fx-background-radius: 4; -fx-background-color: #6B7280; -fx-text-fill: white;");
-        copyBtn.setOnAction(e -> {
-            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
-            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-            content.putString(currentText[0]);
-            clipboard.setContent(content);
-            copyBtn.setText("✓");
-            javafx.animation.Timeline timeline = new javafx.animation.Timeline(
-                    new javafx.animation.KeyFrame(javafx.util.Duration.millis(1500),
-                            ev -> copyBtn.setText("📋")));
-            timeline.play();
-        });
+        MessageBubble bubble = MessageBubble.forAI(timeStamp, () -> currentText[0]);
 
         final Button[] reloadBtn = { null };
         if (sourcePrompt != null && historyBefore != null) {
             reloadBtn[0] = new Button("↻");
-            reloadBtn[0].setStyle(
-                    "-fx-font-size: 11px; -fx-padding: 4 6; -fx-background-radius: 4; -fx-background-color: #10A37F; -fx-text-fill: white;");
+            reloadBtn[0].getStyleClass().add("reload-btn");
             reloadBtn[0].setTooltip(new Tooltip("Générer une nouvelle version"));
             reloadBtn[0].setDisable(true);
 
@@ -529,33 +244,24 @@ public class ChatView {
 
                 new Thread(() -> {
                     try {
-                        APIResponse apiResponse = controller.sendMessageWithPing(sourcePrompt,
-                                historyBefore);
+                        APIResponse apiResponse = controller.sendMessageWithPing(sourcePrompt, historyBefore);
                         String newResponse = apiResponse.content;
                         long pingMs = apiResponse.pingMs;
 
                         javafx.application.Platform.runLater(() -> {
-
-                            VBox sidebar = (VBox) root.getLeft();
-                            HBox bottomBar = (HBox) sidebar.getChildren().get(sidebar.getChildren().size() - 1);
-                            if (bottomBar.getChildren().size() >= 2) {
-                                Label pingLabel = (Label) bottomBar.getChildren().get(1);
-                                lastPingValue = "Ping: " + pingMs + "ms";
-                                pingLabel.setText(lastPingValue);
-                            }
+                            lastPingValue = "Ping: " + pingMs + "ms";
+                            sidebar.setPingText(lastPingValue);
 
                             currentText[0] = newResponse;
 
-                            swapToLabel(messageBox, messageLabel);
+                            swapToLabel(bubble.box, bubble.messageLabel);
                             Thread displayThread = new Thread(() -> {
                                 stopMessageDisplay = false;
                                 for (int i = 0; i <= newResponse.length(); i++) {
-                                    if (stopMessageDisplay) {
-                                        break;
-                                    }
+                                    if (stopMessageDisplay) break;
                                     final int index = i;
                                     javafx.application.Platform.runLater(() -> {
-                                        messageLabel.setText(newResponse.substring(0, index));
+                                        bubble.messageLabel.setText(newResponse.substring(0, index));
                                         scrollToBottom();
                                     });
                                     try {
@@ -565,11 +271,8 @@ public class ChatView {
                                 }
 
                                 javafx.application.Platform.runLater(() -> {
-
-                                    String fullHistory = conversationHistory.getOrDefault(currentConversation,
-                                            historyBefore);
-                                    String oldTurn = controller.buildTurn(historyBefore, sourcePrompt,
-                                            previousResponse);
+                                    String fullHistory = conversationHistory.getOrDefault(currentConversation, historyBefore);
+                                    String oldTurn = controller.buildTurn(historyBefore, sourcePrompt, previousResponse);
                                     String newTurn = controller.buildTurn(historyBefore, sourcePrompt, newResponse);
 
                                     String updatedHistory;
@@ -578,17 +281,16 @@ public class ChatView {
                                                 java.util.regex.Pattern.quote(oldTurn),
                                                 java.util.regex.Matcher.quoteReplacement(newTurn));
                                     } else {
-                                        String oldAssistantLine = (historyBefore != null && !historyBefore.isEmpty())
+                                        String oldLine = (historyBefore != null && !historyBefore.isEmpty())
                                                 ? historyBefore + "\nMiageGPT: " + previousResponse
                                                 : "MiageGPT: " + previousResponse;
-                                        String newAssistantLine = (historyBefore != null && !historyBefore.isEmpty())
+                                        String newLine = (historyBefore != null && !historyBefore.isEmpty())
                                                 ? historyBefore + "\nMiageGPT: " + newResponse
                                                 : "MiageGPT: " + newResponse;
-
-                                        if (fullHistory.contains(oldAssistantLine)) {
+                                        if (fullHistory.contains(oldLine)) {
                                             updatedHistory = fullHistory.replaceFirst(
-                                                    java.util.regex.Pattern.quote(oldAssistantLine),
-                                                    java.util.regex.Matcher.quoteReplacement(newAssistantLine));
+                                                    java.util.regex.Pattern.quote(oldLine),
+                                                    java.util.regex.Matcher.quoteReplacement(newLine));
                                         } else if (fullHistory.equals(historyBefore) || fullHistory.isEmpty()) {
                                             updatedHistory = newTurn;
                                         } else {
@@ -600,9 +302,9 @@ public class ChatView {
 
                                     reloadBtn[0].setText("↻");
                                     reloadBtn[0].setDisable(false);
-                                    copyBtn.setText("📋");
+                                    bubble.copyBtn.setText("📋");
 
-                                    replaceWithClickableText(messageBox, messageLabel, currentText[0]);
+                                    renderMarkdownInBox(bubble.box, bubble.messageLabel, currentText[0]);
                                 });
                             });
                             displayThread.start();
@@ -611,59 +313,39 @@ public class ChatView {
                         javafx.application.Platform.runLater(() -> {
                             reloadBtn[0].setText("↻");
                             reloadBtn[0].setDisable(false);
-                            copyBtn.setText("📋");
+                            bubble.copyBtn.setText("📋");
                             addAIMessage("Erreur: " + ex.getMessage());
                         });
                     }
                 }).start();
             });
+
+            Region gap = new Region();
+            gap.setMinWidth(6);
+            int insertAt = bubble.footerBox.getChildren().size() - 1;
+            bubble.footerBox.getChildren().add(insertAt, gap);
+            bubble.footerBox.getChildren().add(insertAt, reloadBtn[0]);
         }
 
-        HBox footerBox = new HBox();
-        footerBox.setAlignment(Pos.BOTTOM_RIGHT);
-        Region spacerFooter = new Region();
-        HBox.setHgrow(spacerFooter, Priority.ALWAYS);
-        Region gap = new Region();
-        gap.setMinWidth(6);
-        if (reloadBtn[0] != null) {
-            footerBox.getChildren().addAll(timeLabel, spacerFooter, reloadBtn[0], gap, copyBtn);
-        } else {
-            footerBox.getChildren().addAll(timeLabel, spacerFooter, copyBtn);
-        }
-
-        messageBox.getChildren().clear();
-        messageBox.getChildren().addAll(authorLabel, messageLabel, footerBox);
-
-        messageRow.getChildren().add(messageBox);
-
-        chatBox.getChildren().add(messageRow);
+        chatBox.getChildren().add(bubble.row);
 
         conversationMessageCounts.put(currentConversation,
                 conversationMessageCounts.getOrDefault(currentConversation, 0) + 1);
         updateStatsLabel();
 
         scrollToBottom();
-        javafx.application.Platform.runLater(() -> {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ignored) {
-            }
-            scrollToBottom();
-        });
+        javafx.application.Platform.runLater(this::scrollToBottom);
 
         currentMessageThread = new Thread(() -> {
             stopMessageDisplay = false;
             for (int i = 0; i <= currentText[0].length(); i++) {
-                if (stopMessageDisplay) {
-                    break;
-                }
+                if (stopMessageDisplay) break;
                 final int index = i;
                 javafx.application.Platform.runLater(() -> {
-                    messageLabel.setText(currentText[0].substring(0, index));
+                    bubble.messageLabel.setText(currentText[0].substring(0, index));
                     scrollToBottom();
                 });
                 try {
-
                     Thread.sleep(1);
                 } catch (InterruptedException ignored) {
                 }
@@ -671,74 +353,24 @@ public class ChatView {
 
             javafx.application.Platform.runLater(() -> {
                 stopSendButtonLoader();
-
                 if (reloadBtn[0] != null) {
                     reloadBtn[0].setDisable(false);
                 }
-
-                replaceWithClickableText(messageBox, messageLabel, currentText[0]);
+                renderMarkdownInBox(bubble.box, bubble.messageLabel, currentText[0]);
             });
         });
 
         currentMessageThread.start();
     }
 
-    private static final java.util.regex.Pattern URL_PATTERN = java.util.regex.Pattern.compile(
-            "(https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)");
-
-    private javafx.scene.text.TextFlow createClickableTextFlow(String text) {
-        javafx.scene.text.TextFlow textFlow = new javafx.scene.text.TextFlow();
-        textFlow.setLineSpacing(2);
-        textFlow.setMaxWidth(670);
-
-        String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-
-        java.util.regex.Matcher matcher = URL_PATTERN.matcher(text);
-        int lastEnd = 0;
-
-        while (matcher.find()) {
-
-            if (matcher.start() > lastEnd) {
-                javafx.scene.text.Text beforeText = new javafx.scene.text.Text(
-                        text.substring(lastEnd, matcher.start()));
-                beforeText.setStyle("-fx-fill: " + textColor + "; -fx-font-size: 14px;");
-                textFlow.getChildren().add(beforeText);
-            }
-
-            String url = matcher.group();
-            Hyperlink link = new Hyperlink(url);
-            link.setStyle("-fx-text-fill: #58A6FF; -fx-font-size: 14px; -fx-border-width: 0; -fx-padding: 0;");
-            link.setOnAction(ev -> {
-                try {
-                    java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            });
-            textFlow.getChildren().add(link);
-
-            lastEnd = matcher.end();
-        }
-
-        if (lastEnd < text.length()) {
-            javafx.scene.text.Text remainingText = new javafx.scene.text.Text(text.substring(lastEnd));
-            remainingText.setStyle("-fx-fill: " + textColor + "; -fx-font-size: 14px;");
-            textFlow.getChildren().add(remainingText);
-        }
-
-        return textFlow;
-    }
-
-    private void replaceWithClickableText(VBox messageBox, Label messageLabel, String text) {
-        if (!URL_PATTERN.matcher(text).find())
-            return;
-
-        javafx.scene.text.TextFlow textFlow = createClickableTextFlow(text);
+    private void renderMarkdownInBox(VBox messageBox, Label messageLabel, String text) {
+        javafx.scene.text.TextFlow flow = MarkdownRenderer.renderFlow(text, isDarkMode);
         int idx = messageBox.getChildren().indexOf(messageLabel);
         if (idx >= 0) {
-            messageBox.getChildren().set(idx, textFlow);
-            messageBox.getProperties().put("textFlow", textFlow);
+            messageBox.getChildren().set(idx, flow);
         }
+        messageBox.getProperties().put("textFlow", flow);
+        messageBox.getProperties().put("markdownSource", text);
     }
 
     private void swapToLabel(VBox messageBox, Label messageLabel) {
@@ -749,6 +381,7 @@ public class ChatView {
                 messageBox.getChildren().set(idx, messageLabel);
             }
             messageBox.getProperties().remove("textFlow");
+            messageBox.getProperties().remove("markdownSource");
         }
     }
 
@@ -855,9 +488,9 @@ public class ChatView {
 
         dialog.showAndWait().ifPresent(newName -> {
             if (!newName.isEmpty() && !newName.equals(oldName)) {
-                int index = historyList.getItems().indexOf(oldName);
+                int index = sidebar.getHistoryList().getItems().indexOf(oldName);
                 if (index >= 0) {
-                    historyList.getItems().set(index, newName);
+                    sidebar.getHistoryList().getItems().set(index, newName);
                 }
 
                 VBox conv = conversations.remove(oldName);
@@ -889,7 +522,7 @@ public class ChatView {
                     currentConversation = newName;
                 }
 
-                historyList.refresh();
+                sidebar.refresh();
             }
         });
     }
@@ -903,7 +536,7 @@ public class ChatView {
         confirmation.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
 
-                historyList.getItems().remove(conversationName);
+                sidebar.getHistoryList().getItems().remove(conversationName);
 
                 conversations.remove(conversationName);
                 conversationDates.remove(conversationName);
@@ -912,8 +545,8 @@ public class ChatView {
                 controller.deleteConversation(conversationName);
 
                 if (currentConversation.equals(conversationName)) {
-                    if (!historyList.getItems().isEmpty()) {
-                        String newConv = historyList.getItems().get(0);
+                    if (!sidebar.getHistoryList().getItems().isEmpty()) {
+                        String newConv = sidebar.getHistoryList().getItems().get(0);
                         switchConversation(newConv);
                     } else {
 
@@ -923,7 +556,7 @@ public class ChatView {
                     }
                 }
 
-                historyList.refresh();
+                sidebar.refresh();
             }
         });
     }
@@ -977,8 +610,8 @@ public class ChatView {
     private void showWelcomeScreenEmptyHistory() {
 
         showWelcomeScreen();
-        historyList.getItems().clear();
-        historyList.refresh();
+        sidebar.getHistoryList().getItems().clear();
+        sidebar.refresh();
     }
 
     private void scrollToBottom() {
@@ -1035,28 +668,23 @@ public class ChatView {
             messageRow.setAlignment(Pos.CENTER_LEFT);
             messageRow.setPadding(new Insets(10, 0, 10, 0));
 
-            String msgBg = isDarkMode ? "#444654" : "#E8F4F8";
-            String authorColor = isDarkMode ? "#10A37F" : "#0C4A34";
-            String dotColor = authorColor;
+            String dotColor = "#10A37F";
 
             VBox messageBox = new VBox(5);
             messageBox.setMaxWidth(700);
-            messageBox.setStyle(
-                    "-fx-background-color: " + msgBg + "; " +
-                            "-fx-padding: 15; " +
-                            "-fx-background-radius: 10;");
+            messageBox.getStyleClass().add("message-box");
 
             Label authorLabel = new Label("MiageGPT");
-            authorLabel.setStyle("-fx-text-fill: " + authorColor + "; -fx-font-weight: bold; -fx-font-size: 13px;");
+            authorLabel.getStyleClass().add("ai-author");
 
             HBox typingBox = new HBox(5);
             typingBox.setAlignment(Pos.CENTER_LEFT);
 
-            Label dot1 = new Label("●");
+            Label dot1 = new Label("â—");
             dot1.setStyle("-fx-text-fill: " + dotColor + "; -fx-font-size: 10px;");
-            Label dot2 = new Label("●");
+            Label dot2 = new Label("â—");
             dot2.setStyle("-fx-text-fill: " + dotColor + "; -fx-font-size: 10px; -fx-opacity: 0.6;");
-            Label dot3 = new Label("●");
+            Label dot3 = new Label("â—");
             dot3.setStyle("-fx-text-fill: " + dotColor + "; -fx-font-size: 10px; -fx-opacity: 0.3;");
 
             typingBox.getChildren().addAll(dot1, dot2, dot3);
@@ -1247,7 +875,7 @@ public class ChatView {
             loaderTimeline.stop();
         }
 
-        String[] loaderStates = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
+        String[] loaderStates = { "â ‹", "â ™", "â ¹", "â ¸", "â ¼", "â ´", "â ¦", "â §", "â ‡", "â " };
         final int[] index = { 0 };
 
         loaderTimeline = new javafx.animation.Timeline(
@@ -1269,47 +897,15 @@ public class ChatView {
             loaderTimeline = null;
         }
         if (sendBtn != null) {
-            sendBtn.setText("➤");
+            sendBtn.setText("âž¤");
         }
     }
 
-    private void applyInputAreaBackground(VBox target) {
-        if (target == null)
-            return;
-        String bg = isDarkMode ? "rgba(8, 107, 174)" : "#FFFFFF";
-        target.setStyle("-fx-background-color: " + bg + ";");
-    }
-
-    private void updateInputFieldStyle() {
-        if (inputField == null) {
-            return;
-        }
-        String bg = isDarkMode ? "#40414F" : "#ECECF1";
-        String text = isDarkMode ? "#111827" : "#111827";
-        String prompt = isDarkMode ? "#8E8EA0" : "#4B5563";
-        String border = isDarkMode ? "transparent" : "#6B7280";
-
-        inputField.setStyle(
-                "-fx-background-color: " + bg + "; " +
-                        "-fx-text-fill: " + text + "; " +
-                        "-fx-highlight-fill: " + (isDarkMode ? "#2563EB" : "#BFDBFE") + "; " +
-                        "-fx-highlight-text-fill: " + text + "; " +
-                        "-fx-prompt-text-fill: " + prompt + "; " +
-                        "-fx-border-color: " + border + "; " +
-                        "-fx-border-width: 0.3; " +
-                        "-fx-border-radius: 10; " +
-                        "-fx-background-radius: 10; " +
-                        "-fx-padding: 12; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-font-family: 'Segoe UI', 'Arial';");
-    }
 
     private void toggleTheme() {
         isDarkMode = !isDarkMode;
         applyTheme();
-
         updateThemeButtonLabel();
-        updateThemeButtonStyle();
     }
 
     private void updateThemeButtonLabel() {
@@ -1318,115 +914,20 @@ public class ChatView {
     }
 
     private void applyTheme() {
+        root.getStyleClass().setAll(isDarkMode ? "dark-mode" : "light-mode");
 
-        String darkBg = "rgba(8, 107, 174)";
-        String darkSidebar = "rgba(26, 69, 111)";
-        String darkMessageBg = "#444654";
-        String darkText = "#ECECF1";
-        String darkSecondary = "#c8c8c8";
+        String bg = isDarkMode ? "rgba(8, 107, 174)" : "#FFFFFF";
+        scrollPane.setStyle("-fx-background: " + bg + "; -fx-background-color: " + bg + ";");
+        chatBox.setStyle("-fx-background-color: " + bg + ";");
 
-        String lightBg = "#FFFFFF";
-        String lightSidebar = "#C8C8C8";
-        String lightMessageBg = "#E8F4F8";
-        String lightText = "#1F2937";
-        String lightSecondary = "#4B5563";
-
-        String bgColor = isDarkMode ? darkBg : lightBg;
-        String sidebarColor = isDarkMode ? darkSidebar : lightSidebar;
-        String messageBg = isDarkMode ? darkMessageBg : lightMessageBg;
-        String textColor = isDarkMode ? darkText : lightText;
-        String secondaryColor = isDarkMode ? darkSecondary : lightSecondary;
-
-        chatBox.setStyle("-fx-background-color: " + bgColor + ";");
-        centerPane.setStyle("-fx-background-color: " + bgColor + ";");
-        root.setStyle("-fx-background-color: " + bgColor + ";");
-
-        applyInputAreaBackground(inputArea);
-        updateInputFieldStyle();
-
-        scrollPane.setStyle("-fx-background: " + bgColor + "; -fx-background-color: " + bgColor + ";");
-
-        VBox sidebar = (VBox) root.getLeft();
-        sidebar.setStyle("-fx-background-color: " + sidebarColor + ";");
-
-        try {
-            if (!sidebar.getChildren().isEmpty()) {
-                javafx.scene.Node first = sidebar.getChildren().get(0);
-                if (first instanceof StackPane) {
-                    StackPane logoContainer = (StackPane) first;
-                    if (!logoContainer.getChildren().isEmpty()
-                            && logoContainer.getChildren().get(0) instanceof ImageView) {
-                        ImageView logoView = (ImageView) logoContainer.getChildren().get(0);
-                        String logoPath = isDarkMode ? "/icon_logo_sombre.png" : "/icon_logo_clair.png";
-                        try {
-                            logoView.setImage(new Image(getClass().getResourceAsStream(logoPath)));
-                        } catch (Exception ignored) {
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        HBox header = (HBox) centerPane.getTop();
-        header.setStyle("-fx-background-color: " + bgColor + ";");
-
-        dateTimeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 12px; -fx-padding: 10;");
-        statsLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 12px; -fx-padding: 10;");
-        if (historyLabel != null) {
-            historyLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px; -fx-padding: 10 5 5 5;");
-        }
-
-        for (javafx.scene.Node node : sidebar.getChildren()) {
-            if (node instanceof HBox) {
-                HBox bar = (HBox) node;
-                bar.setStyle("-fx-background-color: " + sidebarColor + ";");
-                for (javafx.scene.Node child : bar.getChildren()) {
-                    if (child instanceof Button) {
-                        Button btn = (Button) child;
-                        if (btn == newChatBtn) {
-                            updateNewChatButtonStyle();
-                        } else {
-                            btn.setStyle(
-                                    "-fx-background-color: " + (isDarkMode ? "#2A2B32" : "#E5E7EB") + "; " +
-                                            "-fx-text-fill: " + (isDarkMode ? "white" : "black") + "; " +
-                                            "-fx-font-size: 13px; " +
-                                            "-fx-padding: 10; " +
-                                            "-fx-cursor: hand; " +
-                                            "-fx-border-color: " + (isDarkMode ? "#565869" : "#D1D5DB") + "; " +
-                                            "-fx-border-width: 1; " +
-                                            "-fx-border-radius: 5; " +
-                                            "-fx-background-radius: 5;");
-                        }
-                    } else if (child instanceof Label) {
-                        ((Label) child).setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-                    }
-                }
-            } else if (node instanceof Label) {
-                ((Label) node)
-                        .setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px; -fx-padding: 10 5 5 5;");
-            } else if (node instanceof ListView) {
-                @SuppressWarnings("unchecked")
-                ListView<Object> list = (ListView<Object>) node;
-                list.setStyle(
-                        "-fx-background-color: " + sidebarColor + "; " +
-                                "-fx-control-inner-background: " + sidebarColor + "; " +
-                                "-fx-text-fill: " + textColor + ";");
-            }
-        }
-
-        updateThemeButtonStyle();
-        updateNewChatButtonStyle();
-        updateHomeButtonStyle();
-        updateExportButtonStyle();
-        historyList.refresh();
+        sidebar.updateLogo(isDarkMode);
+        sidebar.refresh();
 
         if (welcomeBox != null && scrollPane.getContent() == welcomeBox) {
-            welcomeBox.setStyle("-fx-background-color: " + bgColor + ";");
+            welcomeBox.setStyle("-fx-background-color: " + bg + ";");
+            String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
+            String secondaryColor = isDarkMode ? "#c8c8c8" : "#4B5563";
             updateWelcomeBoxColors(welcomeBox, textColor, secondaryColor, isDarkMode);
-        } else if (chatBox != null) {
-
-            updateAllMessagesTheme(messageBg, textColor, secondaryColor);
         }
 
         if (summarizeBtn != null) {
@@ -1434,7 +935,6 @@ public class ChatView {
                     .lookup("#innerBackground");
             javafx.scene.control.Label btnLabel = (javafx.scene.control.Label) summarizeBtn.lookup("#btnLabel");
             if (innerBg != null && btnLabel != null) {
-
                 String btnBg = isDarkMode ? "#2A2B32" : "#E5E7EB";
                 String btnText = isDarkMode ? "white" : "#111827";
                 innerBg.setFill(javafx.scene.paint.Color.web(btnBg));
@@ -1442,70 +942,32 @@ public class ChatView {
             }
         }
 
+        updateAllMarkdownFlows();
     }
 
-    private void updateAllMessagesTheme(String messageBg, String textColor, String secondaryColor) {
+    private void updateAllMarkdownFlows() {
         for (javafx.scene.Node messageNode : chatBox.getChildren()) {
             if (messageNode instanceof HBox) {
                 HBox messageRow = (HBox) messageNode;
                 for (javafx.scene.Node child : messageRow.getChildren()) {
                     if (child instanceof VBox) {
                         VBox messageBox = (VBox) child;
-                        String msgId = messageBox.getId();
-
-                        if ("user-message-box".equals(msgId) || "ai-message-box".equals(msgId)) {
-                            updateMessageBoxTheme(messageBox, msgId, messageBg, textColor, secondaryColor);
+                        Object markdownSource = messageBox.getProperties().get("markdownSource");
+                        Object textFlowObj = messageBox.getProperties().get("textFlow");
+                        if (markdownSource instanceof String && textFlowObj instanceof javafx.scene.text.TextFlow) {
+                            javafx.scene.text.TextFlow newFlow = MarkdownRenderer.renderFlow((String) markdownSource, isDarkMode);
+                            int idx = messageBox.getChildren().indexOf(textFlowObj);
+                            if (idx >= 0) {
+                                messageBox.getChildren().set(idx, newFlow);
+                            }
+                            messageBox.getProperties().put("textFlow", newFlow);
                         }
                     }
                 }
-            } else if (messageNode instanceof VBox) {
-                updateWelcomeBoxColors((VBox) messageNode, textColor, secondaryColor, isDarkMode);
             }
         }
     }
 
-    private void updateMessageBoxTheme(VBox messageBox, String msgId, String messageBg, String textColor,
-            String secondaryColor) {
-
-        messageBox.setStyle(
-                "-fx-background-color: " + messageBg + "; " +
-                        "-fx-padding: 15; " +
-                        "-fx-background-radius: 10;");
-
-        Object userData = messageBox.getUserData();
-        if (userData instanceof java.util.Map) {
-            @SuppressWarnings("unchecked")
-            java.util.Map<String, Label> labelMap = (java.util.Map<String, Label>) userData;
-
-            Label authorLabel = labelMap.get("author");
-            Label textLabel = labelMap.get("text");
-            Label timeLabel = labelMap.get("time");
-
-            if (timeLabel != null) {
-                timeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-            }
-            if (textLabel != null) {
-                textLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 14px;");
-            }
-            if (authorLabel != null) {
-                if ("user-message-box".equals(msgId)) {
-                    authorLabel.setStyle("-fx-text-fill: #19C37D; -fx-font-weight: bold; -fx-font-size: 13px;");
-                } else if ("ai-message-box".equals(msgId)) {
-                    authorLabel.setStyle("-fx-text-fill: #10A37F; -fx-font-weight: bold; -fx-font-size: 13px;");
-                }
-            }
-        }
-
-        Object textFlowObj = messageBox.getProperties().get("textFlow");
-        if (textFlowObj instanceof javafx.scene.text.TextFlow) {
-            javafx.scene.text.TextFlow flow = (javafx.scene.text.TextFlow) textFlowObj;
-            for (javafx.scene.Node flowChild : flow.getChildren()) {
-                if (flowChild instanceof javafx.scene.text.Text) {
-                    ((javafx.scene.text.Text) flowChild).setStyle("-fx-fill: " + textColor + "; -fx-font-size: 14px;");
-                }
-            }
-        }
-    }
 
     private void updateWelcomeBoxColors(VBox box, String textColor, String secondaryColor, boolean darkMode) {
         int index = 0;
@@ -1550,13 +1012,8 @@ public class ChatView {
                     javafx.application.Platform.runLater(() -> {
                         hideTypingIndicator();
 
-                        VBox sidebar = (VBox) root.getLeft();
-                        HBox bottomBar = (HBox) sidebar.getChildren().get(sidebar.getChildren().size() - 1);
-                        if (bottomBar.getChildren().size() >= 2) {
-                            Label pingLabel = (Label) bottomBar.getChildren().get(1);
-                            lastPingValue = "Ping: " + pingMs + "ms";
-                            pingLabel.setText(lastPingValue);
-                        }
+                        lastPingValue = "Ping: " + pingMs + "ms";
+                        sidebar.setPingText(lastPingValue);
 
                         javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
                                 javafx.util.Duration.millis(500));
@@ -1601,18 +1058,7 @@ public class ChatView {
                 }
                 sendBtn.getProperties().remove("borderCircle");
             }
-            sendBtn.setStyle(
-                    "-fx-background-color: #000000ff; " +
-                            "-fx-text-fill: white; " +
-                            "-fx-font-size: 16px; " +
-                            "-fx-font-weight: bold; " +
-                            "-fx-padding: 12 12; " +
-                            "-fx-min-width: 46; " +
-                            "-fx-min-height: 46; " +
-                            "-fx-pref-width: 46; " +
-                            "-fx-pref-height: 46; " +
-                            "-fx-background-radius: 23; " +
-                            "-fx-cursor: hand;");
+            sendBtn.setStyle("");
 
             applySendHandler(this::handleSendMessage);
         }
@@ -1633,96 +1079,11 @@ public class ChatView {
         }
     }
 
-    private void updateThemeButtonStyle() {
-        if (themeToggleBtn == null) {
-            return;
-        }
-        String bg = isDarkMode ? "#2A2B32" : "#E5E7EB";
-        String border = isDarkMode ? "#565869" : "#D1D5DB";
-        String text = isDarkMode ? "white" : "#111827";
-
-        themeToggleBtn.setStyle("-fx-background-color: " + bg + "; " +
-                "-fx-text-fill: " + text + "; " +
-                "-fx-font-size: 13px; " +
-                "-fx-padding: 10 12; " +
-                "-fx-cursor: hand; " +
-                "-fx-border-color: " + border + "; " +
-                "-fx-border-width: 1; " +
-                "-fx-border-radius: 14; " +
-                "-fx-background-radius: 14;");
-        themeToggleBtn.setPrefSize(180, 44);
-    }
-
-    private void updateNewChatButtonStyle() {
-        if (newChatBtn == null) {
-            return;
-        }
-        String bg = "#0EA5E9";
-        String border = "#0EA5E9";
-
-        newChatBtn.setStyle("-fx-background-color: " + bg + "; " +
-                "-fx-text-fill: white; " +
-                "-fx-font-size: 13px; " +
-                "-fx-padding: 10; " +
-                "-fx-cursor: hand; " +
-                "-fx-border-color: " + border + "; " +
-                "-fx-border-width: 1; " +
-                "-fx-border-radius: 5; " +
-                "-fx-background-radius: 5;");
-    }
-
-    private void updateHomeButtonStyle() {
-        if (homeBtn == null) {
-
-            return;
-        }
-        String bg = isDarkMode ? "#2A2B32" : "#E5E7EB";
-        String border = isDarkMode ? "#565869" : "#D1D5DB";
-        String text = isDarkMode ? "white" : "#111827";
-
-        homeBtn.setStyle("-fx-background-color: " + bg + "; " +
-                "-fx-text-fill: " + text + "; " +
-                "-fx-font-size: 13px; " +
-                "-fx-padding: 10; " +
-                "-fx-cursor: hand; " +
-                "-fx-border-color: " + border + "; " +
-                "-fx-border-width: 1; " +
-                "-fx-border-radius: 5; " +
-                "-fx-background-radius: 5;");
-    }
 
     private void setConnectionStatus(boolean connected) {
-        if (connectionIndicator == null) {
-            return;
-        }
-        if (connected) {
-            connectionIndicator.setText("Connecté");
-            connectionIndicator.setStyle("-fx-text-fill: #10A37F; -fx-font-size: 11px;");
-        } else {
-            connectionIndicator.setText("Déconnecté");
-            connectionIndicator.setStyle("-fx-text-fill: #EF4444; -fx-font-size: 11px;");
-        }
+        sidebar.setConnectionStatus(connected);
     }
 
-    private void updateExportButtonStyle() {
-        if (exportBtn == null)
-            return;
-        String baseBg = isDarkMode ? "#2A2B32" : "#E5F0F7";
-        String borderColor = isDarkMode ? "#565869" : "#C5D8E8";
-        String textColor = isDarkMode ? "white" : "#111827";
-
-        exportBtn.setStyle(
-                "-fx-background-color: " + baseBg + "; " +
-                        "-fx-text-fill: " + textColor + "; " +
-                        "-fx-font-size: 12px; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-padding: 10 12; " +
-                        "-fx-cursor: hand; " +
-                        "-fx-border-color: " + borderColor + "; " +
-                        "-fx-border-width: 1; " +
-                        "-fx-border-radius: 14; " +
-                        "-fx-background-radius: 14;");
-    }
 
     private void exportConversation() {
         if (currentConversation == null || currentConversation.isBlank()) {
@@ -1781,7 +1142,7 @@ public class ChatView {
                     : System.currentTimeMillis();
             conversationStartTimes.put(data.name, startTime);
 
-            historyList.getItems().add(data.name);
+            sidebar.getHistoryList().getItems().add(data.name);
         }
 
     }
@@ -1789,7 +1150,7 @@ public class ChatView {
     private VBox rebuildConversationUI(String history) {
         VBox convBox = new VBox(20);
         convBox.setPadding(new Insets(20));
-        convBox.setStyle("-fx-background-color: rgba(8, 107, 174);");
+        convBox.getStyleClass().add("chat-box");
 
         if (history == null || history.trim().isEmpty()) {
             return convBox;
@@ -1798,122 +1159,13 @@ public class ChatView {
         List<String[]> messages = controller.parseHistory(history);
         for (String[] msg : messages) {
             if ("user".equals(msg[0])) {
-                addStaticUserMessage(convBox, msg[1]);
+                convBox.getChildren().add(MessageBubble.staticUser(msg[1]));
             } else if ("assistant".equals(msg[0])) {
-                addStaticAIMessage(convBox, msg[1]);
+                convBox.getChildren().add(MessageBubble.staticAI(msg[1], isDarkMode));
             }
         }
 
         return convBox;
-    }
-
-    private void addStaticUserMessage(VBox targetBox, String text) {
-        HBox messageRow = new HBox();
-        messageRow.setAlignment(Pos.CENTER_RIGHT);
-        messageRow.setPadding(new Insets(10, 0, 10, 0));
-        messageRow.setId("user-message-row");
-
-        VBox messageBox = new VBox(5);
-        messageBox.setMaxWidth(700);
-        messageBox.setId("user-message-box");
-
-        String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
-        String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
-
-        messageBox.setStyle(
-                "-fx-background-color: " + messageBg + "; " +
-                        "-fx-padding: 15; " +
-                        "-fx-background-radius: 10;");
-
-        Label authorLabel = new Label("Vous");
-        authorLabel.setId("user-author");
-        authorLabel.setStyle("-fx-text-fill: #19C37D; -fx-font-weight: bold; -fx-font-size: 13px;");
-
-        Label messageLabel = new Label(text);
-        messageLabel.setWrapText(true);
-        messageLabel.setId("user-message-text");
-        messageLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 14px;");
-
-        Label timeLabel = new Label("");
-        timeLabel.setId("user-time");
-        timeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-
-        messageBox.getChildren().addAll(authorLabel, messageLabel, timeLabel);
-
-        Map<String, Label> labelMap = new HashMap<>();
-        labelMap.put("author", authorLabel);
-        labelMap.put("text", messageLabel);
-        labelMap.put("time", timeLabel);
-        messageBox.setUserData(labelMap);
-
-        messageRow.getChildren().add(messageBox);
-        targetBox.getChildren().add(messageRow);
-    }
-
-    private void addStaticAIMessage(VBox targetBox, String text) {
-        HBox messageRow = new HBox();
-        messageRow.setAlignment(Pos.CENTER_LEFT);
-        messageRow.setPadding(new Insets(10, 0, 10, 0));
-        messageRow.setId("ai-message-row");
-
-        VBox messageBox = new VBox(5);
-        messageBox.setMaxWidth(700);
-        messageBox.setId("ai-message-box");
-
-        String messageBg = isDarkMode ? "#444654" : "#E8F4F8";
-        String textColor = isDarkMode ? "#ECECF1" : "#1F2937";
-        String secondaryColor = isDarkMode ? "#8E8EA0" : "#4B5563";
-
-        messageBox.setStyle(
-                "-fx-background-color: " + messageBg + "; " +
-                        "-fx-padding: 15; " +
-                        "-fx-background-radius: 10;");
-
-        Label authorLabel = new Label("MiageGPT");
-        authorLabel.setId("ai-author");
-        authorLabel.setStyle("-fx-text-fill: #10A37F; -fx-font-weight: bold; -fx-font-size: 13px;");
-
-        Label messageLabel = new Label(text);
-        messageLabel.setWrapText(true);
-        messageLabel.setId("ai-message-text");
-        messageLabel.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 14px;");
-
-        Label timeLabel = new Label("");
-        timeLabel.setId("ai-time");
-        timeLabel.setStyle("-fx-text-fill: " + secondaryColor + "; -fx-font-size: 11px;");
-
-        Button copyBtn = new Button("\uD83D\uDCCB");
-        copyBtn.setStyle(
-                "-fx-font-size: 11px; -fx-padding: 4 6; -fx-background-radius: 4; -fx-background-color: #6B7280; -fx-text-fill: white;");
-        copyBtn.setOnAction(e -> {
-            javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
-            javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
-            content.putString(text);
-            clipboard.setContent(content);
-            copyBtn.setText("✓");
-            javafx.animation.Timeline timeline = new javafx.animation.Timeline(
-                    new javafx.animation.KeyFrame(javafx.util.Duration.millis(1500),
-                            ev -> copyBtn.setText("\uD83D\uDCCB")));
-            timeline.play();
-        });
-
-        HBox footerBox = new HBox();
-        footerBox.setAlignment(Pos.BOTTOM_RIGHT);
-        Region spacerFooter = new Region();
-        HBox.setHgrow(spacerFooter, Priority.ALWAYS);
-        footerBox.getChildren().addAll(timeLabel, spacerFooter, copyBtn);
-
-        messageBox.getChildren().addAll(authorLabel, messageLabel, footerBox);
-
-        Map<String, Label> labelMap = new HashMap<>();
-        labelMap.put("author", authorLabel);
-        labelMap.put("text", messageLabel);
-        labelMap.put("time", timeLabel);
-        messageBox.setUserData(labelMap);
-
-        messageRow.getChildren().add(messageBox);
-        targetBox.getChildren().add(messageRow);
     }
 
     private void saveCurrentConversation() {
