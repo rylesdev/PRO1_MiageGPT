@@ -57,7 +57,7 @@ public class ChatView {
     private String lastPingValue = "Ping: --ms";
 
     private Thread currentMessageThread = null;
-    private boolean stopMessageDisplay = false;
+    private volatile boolean stopMessageDisplay = false;
 
     public ChatView(ChatController controller) {
         this.controller = controller;
@@ -393,56 +393,7 @@ public class ChatView {
         inputBox.setAlignment(Pos.CENTER);
         inputBox.setMaxWidth(800);
 
-        Runnable sendMessage = () -> {
-            String text = inputField.getText().trim();
-            if (!text.isEmpty()) {
-                addUserMessage(text);
-                inputField.clear();
-                showTypingIndicator();
-
-                javafx.application.Platform.runLater(() -> {
-                    startSendButtonLoader();
-
-                    currentMessageThread = new Thread(() -> {
-                        try {
-                            String history = conversationHistory.getOrDefault(currentConversation, "");
-                            APIResponse apiResponse = controller.sendMessageWithPing(text, history);
-                            String botResponse = apiResponse.content;
-                            long pingMs = apiResponse.pingMs;
-
-                            javafx.application.Platform.runLater(() -> {
-                                hideTypingIndicator();
-
-                                VBox sidebar = (VBox) root.getLeft();
-                                HBox bottomBar = (HBox) sidebar.getChildren().get(sidebar.getChildren().size() - 1);
-                                if (bottomBar.getChildren().size() >= 2) {
-                                    Label pingLabel = (Label) bottomBar.getChildren().get(1);
-                                    lastPingValue = "Ping: " + pingMs + "ms";
-                                    pingLabel.setText(lastPingValue);
-                                }
-
-                                try {
-                                    Thread.sleep(500);
-                                } catch (InterruptedException ignored) {
-                                }
-                                addAIMessage(botResponse, text, history);
-                                conversationHistory.put(currentConversation,
-                                        controller.buildTurn(history, text, botResponse));
-                                saveCurrentConversation();
-                            });
-                        } catch (Exception e) {
-                            javafx.application.Platform.runLater(() -> {
-                                hideTypingIndicator();
-                                stopSendButtonLoader();
-                                addAIMessage("Erreur: " + e.getMessage());
-                            });
-                        }
-                    });
-                    currentMessageThread.start();
-                });
-            }
-        };
-        applySendHandler(sendMessage);
+        applySendHandler(this::handleSendMessage);
 
         inputArea.getChildren().add(inputBox);
         return inputArea;
@@ -1184,8 +1135,6 @@ public class ChatView {
                 setConnectionStatus(true);
                 String summary = controller.sendMessage(summaryPrompt, history);
 
-                Thread.sleep(500);
-
                 javafx.application.Platform.runLater(() -> {
                     hideTypingIndicator();
                     setConnectionStatus(true);
@@ -1580,6 +1529,57 @@ public class ChatView {
         }
     }
 
+    private void handleSendMessage() {
+        String text = inputField.getText().trim();
+        if (text.isEmpty()) return;
+
+        addUserMessage(text);
+        inputField.clear();
+        showTypingIndicator();
+
+        javafx.application.Platform.runLater(() -> {
+            startSendButtonLoader();
+
+            currentMessageThread = new Thread(() -> {
+                try {
+                    String history = conversationHistory.getOrDefault(currentConversation, "");
+                    APIResponse apiResponse = controller.sendMessageWithPing(text, history);
+                    String botResponse = apiResponse.content;
+                    long pingMs = apiResponse.pingMs;
+
+                    javafx.application.Platform.runLater(() -> {
+                        hideTypingIndicator();
+
+                        VBox sidebar = (VBox) root.getLeft();
+                        HBox bottomBar = (HBox) sidebar.getChildren().get(sidebar.getChildren().size() - 1);
+                        if (bottomBar.getChildren().size() >= 2) {
+                            Label pingLabel = (Label) bottomBar.getChildren().get(1);
+                            lastPingValue = "Ping: " + pingMs + "ms";
+                            pingLabel.setText(lastPingValue);
+                        }
+
+                        javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
+                                javafx.util.Duration.millis(500));
+                        pause.setOnFinished(ev -> {
+                            addAIMessage(botResponse, text, history);
+                            conversationHistory.put(currentConversation,
+                                    controller.buildTurn(history, text, botResponse));
+                            saveCurrentConversation();
+                        });
+                        pause.play();
+                    });
+                } catch (Exception e) {
+                    javafx.application.Platform.runLater(() -> {
+                        hideTypingIndicator();
+                        stopSendButtonLoader();
+                        addAIMessage("Erreur: " + e.getMessage());
+                    });
+                }
+            });
+            currentMessageThread.start();
+        });
+    }
+
     private void hideTypingIndicator() {
 
         if (sendBtn != null) {
@@ -1614,50 +1614,7 @@ public class ChatView {
                             "-fx-background-radius: 23; " +
                             "-fx-cursor: hand;");
 
-            Runnable sendMessage = () -> {
-                String text = inputField.getText().trim();
-                if (!text.isEmpty()) {
-                    addUserMessage(text);
-                    inputField.clear();
-                    showTypingIndicator();
-
-                    new Thread(() -> {
-                        try {
-                            String history = conversationHistory.getOrDefault(currentConversation, "");
-                            APIResponse apiResponse = controller.sendMessageWithPing(text, history);
-                            String botResponse = apiResponse.content;
-                            long pingMs = apiResponse.pingMs;
-
-                            javafx.application.Platform.runLater(() -> {
-                                hideTypingIndicator();
-
-                                VBox sidebar = (VBox) root.getLeft();
-                                HBox bottomBar = (HBox) sidebar.getChildren().get(sidebar.getChildren().size() - 1);
-                                if (bottomBar.getChildren().size() >= 2) {
-                                    Label pingLabel = (Label) bottomBar.getChildren().get(1);
-                                    lastPingValue = "Ping: " + pingMs + "ms";
-                                    pingLabel.setText(lastPingValue);
-                                }
-
-                                try {
-                                    Thread.sleep(500);
-                                } catch (InterruptedException ignored) {
-                                }
-                                addAIMessage(botResponse, text, history);
-                                conversationHistory.put(currentConversation,
-                                        controller.buildTurn(history, text, botResponse));
-                                saveCurrentConversation();
-                            });
-                        } catch (Exception e) {
-                            javafx.application.Platform.runLater(() -> {
-                                hideTypingIndicator();
-                                addAIMessage("Erreur: " + e.getMessage());
-                            });
-                        }
-                    }).start();
-                }
-            };
-            sendBtn.setOnAction(e -> sendMessage.run());
+            applySendHandler(this::handleSendMessage);
         }
 
         if (typingTimeline != null) {
